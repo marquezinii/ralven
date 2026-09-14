@@ -582,6 +582,29 @@
                                             </Grid>
                                         </Border>
 
+                                        <Border Style="{StaticResource SettingRowStyle}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                                <StackPanel Margin="0,0,24,0">
+                                                    <TextBlock Text="{Binding [Settings.Account.Discord.Title], Source={StaticResource LocalizedStrings}}" Style="{StaticResource BodyStrongText}" />
+                                                    <TextBlock Text="{Binding [Settings.Account.Discord.Description], Source={StaticResource LocalizedStrings}}" Style="{StaticResource SecondaryText}" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                                    <TextBlock x:Name="DiscordLinkCodeText"
+                                                               Visibility="Collapsed"
+                                                               Margin="0,8,0,0"
+                                                               FontFamily="Consolas"
+                                                               FontSize="16"
+                                                               FontWeight="SemiBold"
+                                                               AutomationProperties.LiveSetting="Polite" />
+                                                </StackPanel>
+                                                <Button Grid.Column="1"
+                                                        x:Name="DiscordLinkButton"
+                                                        Content="{Binding [Settings.Account.Discord.Generate], Source={StaticResource LocalizedStrings}}"
+                                                        Style="{StaticResource SecondaryButtonStyle}"
+                                                        VerticalAlignment="Center"
+                                                        Click="DiscordLink_Click" />
+                                            </Grid>
+                                        </Border>
+
                                         <TextBlock Text="{Binding [Settings.Account.Security.Title], Source={StaticResource LocalizedStrings}}"
                                                    Style="{StaticResource SubsectionText}"
                                                    Margin="0,28,0,11" />

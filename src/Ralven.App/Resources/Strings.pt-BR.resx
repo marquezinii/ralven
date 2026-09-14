@@ -1593,6 +1593,12 @@
   <data name="Settings.Account.CurrentPasswordLabel" xml:space="preserve"><value>Senha atual</value></data>
   <data name="Settings.Account.RemovePhoto" xml:space="preserve"><value>Remover</value></data>
   <data name="Progress.CancelHelp" xml:space="preserve"><value>A etapa atual termina antes de parar.</value></data>
+  <data name="Settings.Account.Discord.Title" xml:space="preserve"><value>Discord</value></data>
+  <data name="Settings.Account.Discord.Description" xml:space="preserve"><value>Vincule sua conta para receber automaticamente o cargo do seu plano no servidor oficial.</value></data>
+  <data name="Settings.Account.Discord.Generate" xml:space="preserve"><value>Gerar código</value></data>
+  <data name="Settings.Account.Discord.Copied" xml:space="preserve"><value>Código copiado. Use /vincular no Discord em até 10 minutos.</value></data>
+  <data name="Settings.Account.Discord.Generated" xml:space="preserve"><value>Use o código exibido em /vincular no Discord em até 10 minutos.</value></data>
+  <data name="Settings.Account.Discord.Failed" xml:space="preserve"><value>Não foi possível gerar o código agora. Tente novamente.</value></data>
   <data name="Settings.Account.Security.Title" xml:space="preserve"><value>Segurança</value></data>
   <data name="Settings.Account.Security.Description" xml:space="preserve"><value>Gerencie a credencial usada para acessar sua conta.</value></data>
   <data name="Settings.Account.PasswordLabel" xml:space="preserve"><value>Senha</value></data>
