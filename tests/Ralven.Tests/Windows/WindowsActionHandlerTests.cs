@@ -396,29 +396,42 @@ public sealed class WindowsActionHandlerTests
     }
 
     [Fact]
-    public async Task SessionPowerPlan_SucceedsWithoutElevationWhenWindowsAllowsIt()
+    public async Task SessionPowerPlan_AlreadyActiveWithoutElevation_ReturnsNoChangeWithoutActivation()
     {
-        // Many Windows configurations let a standard user switch the active
-        // power scheme; the action must no longer refuse outright just
-        // because the process isn't elevated -- only a genuine
-        // AccessDenied result should require UAC.
         var controller = new FakePowerPlanController();
+        controller.ActiveScheme = controller.PerformanceScheme;
         var action = new SessionPerformancePowerPlanAction(controller, new FakePowerStatusProvider());
         var context = Context(elevated: false);
 
         var result = await action.ApplyAsync(context, CancellationToken.None);
 
-        Assert.True(result.Changed);
+        Assert.False(result.Changed);
+        Assert.Equal(ActionExecutionOutcome.Verified, result.Outcome);
         Assert.Equal(controller.PerformanceScheme, controller.ActiveScheme);
+        Assert.Equal(0, controller.PerformanceActivationCount);
     }
 
     [Fact]
-    public async Task SessionPowerPlan_AccessDeniedWithoutElevation_ThrowsUnauthorizedAccessWithoutTouchingTheScheme()
+    public async Task SessionPowerPlan_DifferentSchemeWithoutElevation_DefersWithoutMutation()
+    {
+        var controller = new FakePowerPlanController();
+        var previous = controller.ActiveScheme;
+        var action = new SessionPerformancePowerPlanAction(controller, new FakePowerStatusProvider());
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => action.ApplyAsync(Context(elevated: false), CancellationToken.None));
+
+        Assert.Equal(previous, controller.ActiveScheme);
+        Assert.Equal(0, controller.PerformanceActivationCount);
+    }
+
+    [Fact]
+    public async Task SessionPowerPlan_AccessDeniedWhileElevated_ThrowsUnauthorizedAccessWithoutTouchingTheScheme()
     {
         var controller = new FakePowerPlanController { DenyAccess = true };
         var previous = controller.ActiveScheme;
         var action = new SessionPerformancePowerPlanAction(controller, new FakePowerStatusProvider());
-        var context = Context(elevated: false);
+        var context = Context(elevated: true);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => action.ApplyAsync(context, CancellationToken.None));
@@ -432,7 +445,7 @@ public sealed class WindowsActionHandlerTests
         var controller = new FakePowerPlanController { PerformanceAvailable = false };
         var previous = controller.ActiveScheme;
         var action = new SessionPerformancePowerPlanAction(controller, new FakePowerStatusProvider());
-        var context = Context(elevated: false);
+        var context = Context(elevated: true);
 
         var result = await action.ApplyAsync(context, CancellationToken.None);
 

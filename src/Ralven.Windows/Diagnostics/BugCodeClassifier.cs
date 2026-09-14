@@ -157,6 +157,7 @@ public static class BugCodeClassifier
             "transaction-not-committed" => BugCode.BRK_TRANSACTION_INCOMPLETE,
             "rollback-not-completed" => BugCode.BRK_ROLLBACK_INCOMPLETE,
             "broker-not-elevated" => BugCode.BRK_UAC_DENIED,
+            "broker-pipe-connection-failed" => BugCode.BRK_IPC_COMMUNICATION,
             "broker-operation-failed" or "broker-operation-timeout" => BugCode.BRK_ACTION_EXECUTION,
             null or "" => BugCode.BRK_PROCESS_CRASH,
             _ => BugCode.BRK_REQUEST_VALIDATION
