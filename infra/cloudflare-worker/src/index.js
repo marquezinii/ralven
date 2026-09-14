@@ -50,6 +50,12 @@ import { createAccountCheckout, cancelAccountBilling, fetchAccountBilling, syncA
 import { BillingError } from './billing/asaasApi.js';
 import { billingReturnPage } from './billing/returnPage.js';
 import { handleRalvenAi } from './ralvenAi.js';
+import {
+  authorizeDiscordBot,
+  createDiscordLinkCode,
+  fetchDiscordRoleLinks,
+  redeemDiscordLinkCode,
+} from './discordLink.js';
 
 const MAX_TELEMETRY_BODY_BYTES = 512 * 1024;
 const MAX_BUG_REPORT_BODY_BYTES = 128 * 1024;
@@ -72,6 +78,9 @@ const MAX_LIVE_ALERT_BODY_BYTES = 4 * 1024;
 //   POST    /account/mfa/recovery-codes -- generate one-time TOTP recovery codes after recent authentication
 //   POST    /account/mfa/recover   -- recover a TOTP-blocked sign-in without returning Firebase tokens
 //   GET     /account/entitlements  -- read the caller's server-authoritative access tier (requires a valid Firebase ID token)
+//   POST    /account/discord/link-code -- create a short-lived one-time Discord link code
+//   POST    /discord/link/redeem   -- consume a link code (Discord bot service authentication)
+//   GET     /discord/role-sync     -- list linked users and authoritative tiers (Discord bot service authentication)
 //   GET     /account/billing       -- offer and reconciled subscription status (Firebase ID token)
 //   POST    /account/billing/checkout -- hosted monthly checkout for the accepted server offer
 //   POST    /account/billing/cancel -- stop future renewals after provider confirmation
@@ -218,6 +227,15 @@ async function route(request, env, url) {
   }
   if (request.method === 'GET' && url.pathname === '/account/entitlements') {
     return handleAccountEntitlementsGet(request, env);
+  }
+  if (request.method === 'POST' && url.pathname === '/account/discord/link-code') {
+    return handleDiscordLinkCodeCreate(request, env);
+  }
+  if (request.method === 'POST' && url.pathname === '/discord/link/redeem') {
+    return handleDiscordLinkRedeem(request, env);
+  }
+  if (request.method === 'GET' && url.pathname === '/discord/role-sync') {
+    return handleDiscordRoleSync(request, env);
   }
   if ((request.method === 'GET' && url.pathname === '/account/billing')
     || (request.method === 'POST' && ['/account/billing/checkout', '/account/billing/cancel'].includes(url.pathname))) {
@@ -551,6 +569,54 @@ async function handleAccountEntitlementsGet(request, env) {
     return jsonResponse(await fetchAccountEntitlements(env.TELEMETRY_DB, auth.uid));
   } catch {
     return jsonResponse({ error: 'entitlements-unavailable' }, 500);
+  }
+}
+
+async function handleDiscordLinkCodeCreate(request, env) {
+  const auth = await requireAccountUser(request, env);
+  if (!auth.authorized) return auth.response;
+  if (!hasExactJsonContentType(request)) return jsonResponse({ error: 'invalid-content-type' }, 415);
+  const payload = await readBoundedJson(request, 128);
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload) || Object.keys(payload).length !== 0) {
+    return jsonResponse({ error: 'invalid-request' }, 400);
+  }
+  try {
+    return jsonResponse(await createDiscordLinkCode(
+      env.TELEMETRY_DB, auth.uid, env.RALVEN_DISCORD_BOT_SECRET,
+    ), 201);
+  } catch {
+    return jsonResponse({ error: 'discord-link-unavailable' }, 503);
+  }
+}
+
+async function handleDiscordLinkRedeem(request, env) {
+  if (!await authorizeDiscordBot(request, env.RALVEN_DISCORD_BOT_SECRET)) {
+    return jsonResponse({ error: 'unauthorized' }, 401);
+  }
+  if (!hasExactJsonContentType(request)) return jsonResponse({ error: 'invalid-content-type' }, 415);
+  const payload = await readBoundedJson(request, 256);
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'code,discordUserId') {
+    return jsonResponse({ error: 'invalid-request' }, 400);
+  }
+  try {
+    const result = await redeemDiscordLinkCode(
+      env.TELEMETRY_DB, payload.code, payload.discordUserId, env.RALVEN_DISCORD_BOT_SECRET,
+    );
+    return result.ok ? jsonResponse({ success: true }) : jsonResponse({ error: result.code }, 409);
+  } catch {
+    return jsonResponse({ error: 'discord-link-unavailable' }, 503);
+  }
+}
+
+async function handleDiscordRoleSync(request, env) {
+  if (!await authorizeDiscordBot(request, env.RALVEN_DISCORD_BOT_SECRET)) {
+    return jsonResponse({ error: 'unauthorized' }, 401);
+  }
+  try {
+    return jsonResponse({ links: await fetchDiscordRoleLinks(env.TELEMETRY_DB) });
+  } catch {
+    return jsonResponse({ error: 'discord-sync-unavailable' }, 503);
   }
 }
 

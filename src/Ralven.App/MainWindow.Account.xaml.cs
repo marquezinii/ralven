@@ -68,6 +68,7 @@ public partial class MainWindow
 
         if (user is null)
         {
+            DiscordLinkCodeText.Visibility = Visibility.Collapsed;
             ApplyAvatar(currentUser is null ? null : avatarStore.TryLoad(currentUser.Uid), AccountAvatarEllipse, AccountFallbackIcon);
             ApplyAvatar(null, AccountSettingsAvatarEllipse, AccountSettingsFallbackIcon);
             ApplyAccountEntitlementPresentation();
@@ -110,11 +111,46 @@ public partial class MainWindow
                 ? "Settings.Account.TwoFactorEnabled"
                 : "Settings.Account.TwoFactorDisabled");
         RemovePhotoButton.Visibility = File.Exists(avatarStore.PathFor(user.Uid)) ? Visibility.Visible : Visibility.Collapsed;
+        DiscordLinkButton.IsEnabled = discordLinkService is not null;
 
         var avatar = avatarStore.TryLoad(user.Uid);
         ApplyAvatar(avatar, AccountAvatarEllipse, AccountFallbackIcon);
         ApplyAvatar(avatar, AccountSettingsAvatarEllipse, AccountSettingsFallbackIcon);
         ApplyAccountEntitlementPresentation();
+    }
+
+    private async void DiscordLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (discordLinkService is null
+            || accountService?.Current is not { State: AuthenticationState.SignedIn }) return;
+        DiscordLinkButton.IsEnabled = false;
+        try
+        {
+            var token = await accountService.GetIdTokenAsync();
+            var link = token is null ? null : await discordLinkService.CreateAsync(token);
+            if (link is null)
+            {
+                AccountSettingsStatus(LocalizationService.Current.GetString("Settings.Account.Discord.Failed"), true);
+                return;
+            }
+
+            var displayCode = $"{link.Code[..5]}-{link.Code[5..]}";
+            DiscordLinkCodeText.Text = displayCode;
+            DiscordLinkCodeText.Visibility = Visibility.Visible;
+            try
+            {
+                System.Windows.Clipboard.SetText(displayCode);
+                AccountSettingsStatus(LocalizationService.Current.GetString("Settings.Account.Discord.Copied"), false);
+            }
+            catch (Exception exception) when (exception is System.Runtime.InteropServices.ExternalException)
+            {
+                AccountSettingsStatus(LocalizationService.Current.GetString("Settings.Account.Discord.Generated"), false);
+            }
+        }
+        finally
+        {
+            DiscordLinkButton.IsEnabled = true;
+        }
     }
 
     private async void RetryAccountReadinessFromSettings_Click(object sender, RoutedEventArgs e)

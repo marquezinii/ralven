@@ -44,6 +44,8 @@
 ##   FIREBASE_ADMIN_PRIVATE_KEY -- PKCS#8 service account private key
 ##   MFA_RECOVERY_CODE_HMAC_SECRET -- distinct random secret (32+ characters)
 ##                          for recovery-code and lookup HMACs
+##   RALVEN_DISCORD_BOT_SECRET -- distinct random secret (32+ characters)
+##                          shared only with the official Discord bot
 ##
 ## DASHBOARD_ORIGIN below is a plain, non-secret var -- the exact comma-separated
 ## origins the dashboard is served from, so CORS headers are only ever sent back
