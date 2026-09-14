@@ -1,4 +1,4 @@
-name: Discord - Nova versão estável
+name: Discord - anúncio de release
 
 on:
   release:
@@ -6,206 +6,73 @@ on:
   repository_dispatch:
     types: [ralven-release-published]
 
-  # Permite testar manualmente sem precisar criar uma release falsa.
-  workflow_dispatch:
-
 permissions:
   contents: read
 
+# A release criada pelo workflow usa repository_dispatch porque eventos gerados
+# pelo GITHUB_TOKEN não iniciam outro workflow. Publicações manuais entram pelo
+# evento release. Ambos só observam releases publicadas, nunca edições.
+concurrency:
+  group: discord-release-${{ github.event.release.id || github.event.client_payload.tag }}
+  cancel-in-progress: false
+
 jobs:
   notify-discord:
-    # Hoje usamos somente versões estáveis.
-    # Mesmo que alguém publique uma pre-release no futuro,
-    # ela não será anunciada neste canal.
-    if: github.event_name != 'release' || (github.event.release.prerelease == false && github.event.release.draft == false)
-
     runs-on: ubuntu-latest
     timeout-minutes: 2
 
     steps:
-      - name: Publicar atualização no Discord
+      - name: Resolver release publicada
+        id: release
         shell: bash
-
         env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-          GITHUB_TOKEN: ${{ github.token }}
-
+          GH_TOKEN: ${{ github.token }}
         run: |
-          python3 <<'PY'
-          import json
-          import os
-          import sys
-          import urllib.error
-          import urllib.parse
-          import urllib.request
-          from pathlib import Path
+          if [[ "$GITHUB_EVENT_NAME" == "release" ]]; then
+            jq '.release' "$GITHUB_EVENT_PATH" > release.json
+          else
+            tag="$(jq -r '.client_payload.tag // empty' "$GITHUB_EVENT_PATH")"
+            [[ -n "$tag" ]] || { echo 'repository_dispatch sem tag de release.' >&2; exit 1; }
+            gh api "repos/$GITHUB_REPOSITORY/releases/tags/$tag" > release.json
+          fi
 
-          WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
-          EVENT_PATH = os.environ.get("GITHUB_EVENT_PATH", "")
-          EVENT_NAME = os.environ.get("GITHUB_EVENT_NAME", "")
-          REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "Ralven")
-          GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-
-          # Cor laranja da identidade visual do Ralven.
-          COLOR = 0xFF8A00
-
-          if not WEBHOOK_URL:
-              print("ERRO: secret DISCORD_RELEASE_WEBHOOK não configurado.", file=sys.stderr)
-              sys.exit(1)
-
-
-          def split_markdown(text: str, limit: int = 3900):
-              """Divide release notes grandes em várias mensagens sem ultrapassar os limites do Discord."""
-              text = (text or "").strip()
-              if not text:
-                  return ["Nenhuma nota de versão foi informada nesta release."]
-
-              chunks = []
-              current = ""
-              for line in text.splitlines(keepends=True):
-                  while len(line) > limit:
-                      if current:
-                          chunks.append(current.rstrip())
-                          current = ""
-                      chunks.append(line[:limit].rstrip())
-                      line = line[limit:]
-
-                  if len(current) + len(line) > limit:
-                      if current:
-                          chunks.append(current.rstrip())
-                      current = line
-                  else:
-                      current += line
-
-              if current.strip():
-                  chunks.append(current.rstrip())
-
-              return chunks or ["Nenhuma nota de versão foi informada nesta release."]
-
-
-          def post(payload):
-              """Envia uma mensagem para o webhook e falha o workflow caso o Discord rejeite a requisição."""
-              data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-              separator = "&" if "?" in WEBHOOK_URL else "?"
-              request = urllib.request.Request(
-                  WEBHOOK_URL + separator + "wait=true",
-                  data=data,
-                  headers={
-                      "Content-Type": "application/json; charset=utf-8",
-                      "User-Agent": "Ralven-GitHub-Actions/1.0",
-                  },
-                  method="POST",
-              )
-              try:
-                  with urllib.request.urlopen(request, timeout=20) as response:
-                      if response.status not in (200, 204):
-                          raise RuntimeError(f"Discord retornou HTTP {response.status}")
-              except urllib.error.HTTPError as exc:
-                  body = exc.read().decode("utf-8", errors="replace")
-                  print(f"ERRO Discord HTTP {exc.code}: {body}", file=sys.stderr)
-                  raise
-
-
-          event = json.loads(Path(EVENT_PATH).read_text(encoding="utf-8"))
-
-          if EVENT_NAME == "workflow_dispatch":
-              # Teste manual: simula uma release para validar o webhook sem publicar uma de verdade.
-              release = {
-                  "tag_name": "v0.0.0-teste",
-                  "name": "Ralven v0.0.0-teste",
-                  "html_url": "https://vemryx.com/Ralven/",
-                  "published_at": None,
-                  "body": (
-                      "## ✨ Novidades\n"
-                      "- Exemplo de nova funcionalidade.\n\n"
-                      "## 🔧 Melhorias\n"
-                      "- Exemplo de melhoria de desempenho.\n\n"
-                      "## 🐛 Correções\n"
-                      "- Exemplo de correção de bug.\n\n"
-                      "> Esta é apenas uma mensagem de teste do sistema de notificações."
-                  ),
-                  "assets": [],
-              }
-              test_mode = True
-          elif EVENT_NAME == "repository_dispatch":
-              tag = str(event.get("client_payload", {}).get("tag", "")).strip()
-              if not tag:
-                  raise RuntimeError("repository_dispatch sem tag de release.")
-              request = urllib.request.Request(
-                  f"https://api.github.com/repos/{REPOSITORY}/releases/tags/{urllib.parse.quote(tag, safe='')}",
-                  headers={
-                      "Accept": "application/vnd.github+json",
-                      "Authorization": f"Bearer {GITHUB_TOKEN}",
-                      "X-GitHub-Api-Version": "2022-11-28",
-                      "User-Agent": "Ralven-GitHub-Actions/1.0",
-                  },
-              )
-              with urllib.request.urlopen(request, timeout=20) as response:
-                  release = json.load(response)
-              if release.get("prerelease") or release.get("draft"):
-                  raise RuntimeError("O dispatch não referencia uma release estável publicada.")
-              test_mode = False
-          else:
-              release = event["release"]
-              test_mode = False
-
-          version = release.get("tag_name") or release.get("name") or "Nova versão"
-          release_url = "https://vemryx.com/Ralven/"
-          published_at = release.get("published_at")
-          body = release.get("body") or ""
-          download_text = "[Baixar no site oficial](https://vemryx.com/Ralven/download/)"
-
-          notes_chunks = split_markdown(body)
-
-          if test_mode:
-              header_title = "🧪 TESTE • Notificação de atualização"
-              header_description = "O sistema automático de atualizações está funcionando corretamente."
-          else:
-              header_title = f"🚀 Ralven {version} está disponível!"
-              header_description = (
-                  "Uma nova versão estável do **Ralven** acaba de ser publicada. "
-                  "Confira abaixo tudo o que mudou."
-              )
-
-          header_embed = {
-              "title": header_title[:256],
-              "url": release_url,
-              "description": header_description,
-              "color": COLOR,
-              "fields": [
-                  {"name": "📦 Versão", "value": f"`{version}`", "inline": True},
-                  {"name": "⬇️ Download", "value": download_text, "inline": True},
-              ],
-              "footer": {"text": "Ralven • Atualizações oficiais"},
-          }
-          if published_at:
-              header_embed["timestamp"] = published_at
-
-          notes_embed = {
-              "title": "📝 Notas da versão",
-              "description": notes_chunks[0],
-              "color": COLOR,
+          jq -e '.draft == false and .published_at != null' release.json > /dev/null || {
+            echo 'O evento não referencia uma release publicada.' >&2
+            exit 1
           }
 
-          # Impede que texto vindo das release notes consiga disparar @everyone, @here etc.
-          post({
-              "username": "Ralven Updates",
-              "allowed_mentions": {"parse": []},
-              "embeds": [header_embed, notes_embed],
-          })
+          if [[ "$(jq -r '.prerelease' release.json)" == "true" ]]; then
+            echo 'channel=beta' >> "$GITHUB_OUTPUT"
+          else
+            echo 'channel=stable' >> "$GITHUB_OUTPUT"
+          fi
 
-          # Continuações, caso o changelog seja muito grande.
-          for index, chunk in enumerate(notes_chunks[1:], start=2):
-              post({
-                  "username": "Ralven Updates",
-                  "allowed_mentions": {"parse": []},
-                  "embeds": [{
-                      "title": f"📝 Notas da versão • continuação {index}",
-                      "description": chunk,
-                      "color": COLOR,
-                      "footer": {"text": f"Ralven • {version}"},
-                  }],
-              })
+      - name: Gerar payload do Discord
+        run: |
+          python3 scripts/release/discord_release.py \
+            --release release.json \
+            --output discord-payloads.json
 
-          print(f"Notificação enviada ao Discord para {version}.")
-          PY
+      - name: Publicar anúncio
+        shell: bash
+        env:
+          CHANNEL: ${{ steps.release.outputs.channel }}
+          DISCORD_STABLE_WEBHOOK: ${{ secrets.DISCORD_STABLE_WEBHOOK }}
+          DISCORD_BETA_WEBHOOK: ${{ secrets.DISCORD_BETA_WEBHOOK }}
+        run: |
+          if [[ "$CHANNEL" == "stable" ]]; then
+            webhook="$DISCORD_STABLE_WEBHOOK"
+          else
+            webhook="$DISCORD_BETA_WEBHOOK"
+          fi
+          [[ -n "$webhook" ]] || { echo "O secret DISCORD_${CHANNEL^^}_WEBHOOK não está configurado." >&2; exit 1; }
+          separator='?'
+          [[ "$webhook" == *'?'* ]] && separator='&'
+
+          while IFS= read -r payload; do
+            curl --fail-with-body --silent --show-error \
+              --retry 2 --retry-all-errors \
+              --header 'Content-Type: application/json' \
+              --data "$payload" \
+              "${webhook}${separator}wait=true" > /dev/null
+          done < <(jq -c '.[]' discord-payloads.json)
