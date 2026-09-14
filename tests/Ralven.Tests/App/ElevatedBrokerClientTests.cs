@@ -125,6 +125,18 @@ public sealed class ElevatedBrokerClientTerminalReadTests
         Assert.Null(terminal);
     }
 
+    [Theory]
+    [InlineData(2, "broker-invalid-arguments")]
+    [InlineData(3, "broker-pipe-connection-failed")]
+    [InlineData(7, "broker-not-elevated")]
+    [InlineData(-1, null)]
+    public void ResolveMissingTerminalErrorCode_PreservesKnownProcessFailures(
+        int exitCode,
+        string? expected)
+    {
+        Assert.Equal(expected, ElevatedBrokerClient.ResolveMissingTerminalErrorCode(exitCode));
+    }
+
     [Fact]
     public async Task ReadUntilTerminalAsync_OutOfOrderSequence_Throws()
     {

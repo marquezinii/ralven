@@ -75,6 +75,8 @@ public sealed record PciExpressAspmState(Guid SchemeId, PciExpressAspmPolicy Pol
 
 public interface IPowerPlanController
 {
+    Guid PerformanceSchemeId { get; }
+
     Task<Guid> GetActiveSchemeAsync(CancellationToken cancellationToken);
 
     Task<PowerPlanActivationOutcome> TryActivatePerformanceSchemeAsync(CancellationToken cancellationToken);
@@ -98,6 +100,8 @@ public interface IPowerPlanController
 
 public sealed partial class PowerCfgController : IPowerPlanController
 {
+    private static readonly Guid PerformanceScheme =
+        new("8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
     private readonly ICommandRunner commandRunner;
     private readonly string powerCfgPath;
     private readonly Func<Guid, PciExpressAspmPolicy?> readAspmPolicy;
@@ -119,6 +123,8 @@ public sealed partial class PowerCfgController : IPowerPlanController
             throw new FileNotFoundException("The Windows powercfg executable was not found.", powerCfgPath);
         }
     }
+
+    public Guid PerformanceSchemeId => PerformanceScheme;
 
     public async Task<Guid> GetActiveSchemeAsync(CancellationToken cancellationToken)
     {
@@ -471,6 +477,19 @@ public sealed class SessionPerformancePowerPlanAction : WindowsOptimizationActio
         }
 
         var previous = await controller.GetActiveSchemeAsync(cancellationToken).ConfigureAwait(false);
+        if (previous == controller.PerformanceSchemeId)
+        {
+            return WindowsActionApplyResult.NoChange(
+                WindowsActionText.Format("ActionResults.PerformancePowerPlan.AlreadyActive"));
+        }
+
+        if (!context.IsElevated)
+        {
+            // Standard-user execution is a read-only preflight. A change still
+            // goes through the broker so its authoritative receipt is preserved.
+            throw new UnauthorizedAccessException("O modo de energia da sessão requer elevação.");
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         PowerPlanActivationOutcome outcome;
         try
@@ -490,12 +509,8 @@ public sealed class SessionPerformancePowerPlanAction : WindowsOptimizationActio
 
         if (outcome == PowerPlanActivationOutcome.AccessDenied)
         {
-            // O produto executa esta ação pelo broker. O ramo não elevado é
-            // mantido apenas como defesa para chamadores de baixo nível.
             throw new UnauthorizedAccessException(
-                context.IsElevated
-                    ? "O Windows recusou a troca do plano de energia mesmo com privilégios administrativos."
-                    : "O modo de energia da sessão requer elevação.");
+                "O Windows recusou a troca do plano de energia mesmo com privilégios administrativos.");
         }
 
         if (outcome == PowerPlanActivationOutcome.SchemeUnavailable)

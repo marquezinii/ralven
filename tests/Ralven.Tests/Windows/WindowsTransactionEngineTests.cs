@@ -216,6 +216,35 @@ public sealed class WindowsTransactionEngineTests
     }
 
     [Fact]
+    public async Task PowerPlanAlreadyActive_CompletesWithoutRequestingElevationOrWriting()
+    {
+        var powerPlans = new FakePowerPlanController();
+        powerPlans.ActiveScheme = powerPlans.PerformanceScheme;
+        var action = new SessionPerformancePowerPlanAction(
+            powerPlans,
+            new FakePowerStatusProvider());
+        var journals = new InMemoryJournalStore();
+        var engine = new WindowsTransactionEngine(
+            new WindowsActionCatalog([action]),
+            journals);
+        var transactionId = Guid.NewGuid();
+
+        var result = await engine.ExecuteAsync(
+            [action],
+            Context(transactionId, elevated: false),
+            new WindowsTransactionOptions { IsolateFailures = true },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionState.Committed, result.State);
+        Assert.Empty(result.DeferredAdministratorActionIds);
+        Assert.Empty(result.ChangedActionIds);
+        Assert.Equal(0, powerPlans.PerformanceActivationCount);
+        var entry = Assert.Single(journals.Get(transactionId).Actions);
+        Assert.Equal(ActionJournalState.Committed, entry.State);
+        Assert.Equal(ActionExecutionOutcome.Verified, entry.Outcome);
+    }
+
+    [Fact]
     public async Task MarkAdministratorPhaseFailedAsync_PreservesAlreadyCommittedStandardActions()
     {
         var standard = new TestGameModeAction();
@@ -702,6 +731,18 @@ public sealed class WindowsTransactionEngineTests
     {
         public override ActionMetadataDto Metadata { get; } = WindowsActionMetadata.For(
             OptimizationActionIds.EnableSessionPerformancePowerPlan);
+
+        public override Task<WindowsActionApplyResult> ApplyAsync(
+            WindowsActionContext context,
+            CancellationToken cancellationToken)
+        {
+            if (!context.IsElevated)
+            {
+                throw new UnauthorizedAccessException("simulated elevation requirement");
+            }
+
+            return base.ApplyAsync(context, cancellationToken);
+        }
     }
 
     private sealed class TestHagsAction : TestAction

@@ -203,7 +203,7 @@ internal sealed class ElevatedBrokerClient
                     ? DescribeMissingTerminalEvent(process.ExitCode, localization)
                     : DescribeBrokerEvent(terminal, localization),
                 State = terminal?.State,
-                ErrorCode = terminal?.ErrorCode,
+                ErrorCode = terminal?.ErrorCode ?? ResolveMissingTerminalErrorCode(process.ExitCode),
                 AppliedActionIds = terminal?.AppliedActionIds ?? []
             };
         }
@@ -283,6 +283,14 @@ internal sealed class ElevatedBrokerClient
         return known
             ?? localization.Format("Broker.Error.Interrupted", exitCode);
     }
+
+    internal static string? ResolveMissingTerminalErrorCode(int exitCode) => exitCode switch
+    {
+        2 => "broker-invalid-arguments",
+        3 => "broker-pipe-connection-failed",
+        7 => "broker-not-elevated",
+        _ => null
+    };
 
     private static string DescribeBrokerEvent(
         BrokerEvent brokerEvent,

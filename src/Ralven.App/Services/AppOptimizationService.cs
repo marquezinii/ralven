@@ -344,7 +344,9 @@ public sealed partial class AppOptimizationService : IAppOptimizationService
                 failureBugCode: BugCodeClassifier.ClassifyBrokerFailure(
                     elevated.ErrorCode,
                     elevated.WasCancelled),
-                failureErrorCategory: elevated.WasCancelled ? "cancelled" : "unexpected").ConfigureAwait(false);
+                failureErrorCategory: TelemetryErrorClassifier.ClassifyBrokerFailure(
+                    elevated.ErrorCode,
+                    elevated.WasCancelled)).ConfigureAwait(false);
         }
 
         return null;

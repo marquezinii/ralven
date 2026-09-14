@@ -77,7 +77,8 @@ public sealed partial class ActionCatalog
                 detectionSummary: "Lê o plano de energia ativo e verifica se o computador está na tomada.",
                 confirmationSummary: "Confirma que o plano de desempenho ficou ativo.",
                 undoSummary: "Totalmente reversível: o plano anterior é restaurado no rollback.",
-                riskLimitations: "Só é aplicado na tomada; aumenta consumo e temperatura enquanto ativo."),
+                riskLimitations: "Só é aplicado na tomada; aumenta consumo e temperatura enquanto ativo.",
+                attemptWithoutElevationFirst: true),
             Define(
                 OptimizationActionIds.AdjustPciExpressPowerManagement,
                 "Ajustar PCI Express Link State Power Management",

@@ -169,7 +169,7 @@ public sealed class ActionCatalogTests
         var powerAction = Assert.Single(elevated, action =>
             action.Id == OptimizationActionIds.EnableSessionPerformancePowerPlan);
         Assert.True(powerAction.RequiresAcPower);
-        Assert.False(powerAction.AttemptWithoutElevationFirst);
+        Assert.True(powerAction.AttemptWithoutElevationFirst);
 
         var hagsAction = Assert.Single(elevated, action =>
             action.Id == OptimizationActionIds.ToggleHags);
