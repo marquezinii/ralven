@@ -497,16 +497,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Creating the public GitHub Release failed.' }
           "created=true" >> $env:GITHUB_OUTPUT
 
-      - name: Notify the stable release workflow
-        if: steps.github_release.outputs.created == 'true'
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh api --method POST "repos/$env:GITHUB_REPOSITORY/dispatches" `
-            --field event_type=ralven-release-published `
-            --field "client_payload[tag]=$env:RELEASE_TAG"
-
       - name: Publish signed stable feed to Vemryx
         shell: pwsh
         env:
