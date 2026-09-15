@@ -1,4 +1,6 @@
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const CODE_ALPHABET_MASK = CODE_ALPHABET.length - 1;
+if ((CODE_ALPHABET.length & CODE_ALPHABET_MASK) !== 0) throw new Error('discord-link-code-alphabet-must-be-power-of-two');
 const CODE_LENGTH = 10;
 const CODE_TTL_MS = 10 * 60 * 1000;
 const DISCORD_ID = /^\d{17,20}$/;
@@ -47,7 +49,7 @@ export async function authorizeDiscordBot(request, secret) {
 
 export async function createDiscordLinkCode(db, uid, secret, now = new Date()) {
   const bytes = crypto.getRandomValues(new Uint8Array(CODE_LENGTH));
-  const code = [...bytes].map(value => CODE_ALPHABET[value % CODE_ALPHABET.length]).join('');
+  const code = [...bytes].map(value => CODE_ALPHABET[value & CODE_ALPHABET_MASK]).join('');
   const codeHash = await hmac(code, secret);
   if (codeHash === null) throw new Error('discord-link-misconfigured');
   const createdAt = now.toISOString();
