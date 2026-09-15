@@ -1508,6 +1508,12 @@
   <data name="Settings.Account.CurrentPasswordLabel" xml:space="preserve"><value>Mot de passe actuel</value></data>
   <data name="Settings.Account.RemovePhoto" xml:space="preserve"><value>Supprimer</value></data>
   <data name="Progress.CancelHelp" xml:space="preserve"><value>L'étape en cours se termine avant de s'arrêter.</value></data>
+  <data name="Settings.Account.Discord.Title" xml:space="preserve"><value>Discord</value></data>
+  <data name="Settings.Account.Discord.Description" xml:space="preserve"><value>Associez votre compte pour recevoir automatiquement le rôle de votre offre sur le serveur officiel.</value></data>
+  <data name="Settings.Account.Discord.Generate" xml:space="preserve"><value>Générer un code</value></data>
+  <data name="Settings.Account.Discord.Copied" xml:space="preserve"><value>Code copié. Utilisez /vincular sur Discord dans les 10 minutes.</value></data>
+  <data name="Settings.Account.Discord.Generated" xml:space="preserve"><value>Utilisez le code affiché avec /vincular sur Discord dans les 10 minutes.</value></data>
+  <data name="Settings.Account.Discord.Failed" xml:space="preserve"><value>Impossible de générer un code pour le moment. Réessayez.</value></data>
   <data name="Settings.Account.Security.Title" xml:space="preserve"><value>Sécurité</value></data>
   <data name="Settings.Account.Security.Description" xml:space="preserve"><value>Gérez les informations d'identification utilisées pour accéder à votre compte.</value></data>
   <data name="Settings.Account.PasswordLabel" xml:space="preserve"><value>Mot de passe</value></data>
@@ -2019,6 +2025,7 @@ Exception : {3}
   <data name="Pro.Development.Action" xml:space="preserve"><value>Bientôt</value></data>
   <data name="Pro.DiscoverDevelopment" xml:space="preserve"><value>Découvrir Ralven Pro · Bientôt</value></data>
   <data name="Navigation.ProDevelopment" xml:space="preserve"><value>Pro · Bientôt</value></data>
+  <data name="ReleaseNotes.1_7_1.Fixed" xml:space="preserve"><value>• Correction d’un problème qui pouvait empêcher les opérations autorisées par l’administrateur de se terminer après la confirmation UAC.</value></data>
   <data name="ReleaseNotes.1_7_0.Added" xml:space="preserve"><value>• Ajout d’un centre d’applications pour rechercher, installer, mettre à jour et désinstaller des paquets pris en charge avec confirmation.
 • Ajout de la prise en charge de l’interface en français et de l’authentification à deux facteurs avec codes de récupération.</value></data>
   <data name="ReleaseNotes.1_7_0.Improved" xml:space="preserve"><value>• Amélioration de la détection de FiveM Legacy avec sélection manuelle validée et parcours plus clairs pour Système, la zone de notification et l’installateur.

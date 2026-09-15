@@ -336,3 +336,27 @@ CREATE INDEX IF NOT EXISTS idx_ralven_ai_usage_period
     ON ralven_ai_usage (billing_period);
 CREATE INDEX IF NOT EXISTS idx_ralven_ai_usage_created_at
     ON ralven_ai_usage (created_at);
+
+-- Short-lived Discord codes are stored only as keyed digests. Each Ralven
+-- account and Discord user can participate in at most one active link.
+CREATE TABLE IF NOT EXISTS discord_link_codes (
+    code_hash TEXT PRIMARY KEY NOT NULL CHECK (length(code_hash) = 43),
+    account_uid TEXT NOT NULL REFERENCES account_profiles (uid) ON DELETE CASCADE,
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL,
+    CHECK (expires_at > created_at),
+    CHECK (used_at IS NULL OR used_at >= created_at)
+);
+
+CREATE INDEX IF NOT EXISTS idx_discord_link_codes_account
+    ON discord_link_codes (account_uid, expires_at);
+
+CREATE TABLE IF NOT EXISTS discord_account_links (
+    account_uid TEXT PRIMARY KEY NOT NULL REFERENCES account_profiles (uid) ON DELETE CASCADE,
+    discord_user_id TEXT NOT NULL UNIQUE
+        CHECK (length(discord_user_id) BETWEEN 17 AND 20 AND discord_user_id NOT GLOB '*[^0-9]*'),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    CHECK (updated_at >= created_at)
+);

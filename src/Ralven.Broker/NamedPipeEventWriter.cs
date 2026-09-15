@@ -16,6 +16,11 @@ internal sealed class BrokerPipeException : IOException
 
 internal sealed class NamedPipeEventWriter : IAsyncDisposable
 {
+    // The unelevated server already applies CurrentUserOnly to the pipe ACL.
+    // Repeating it on this elevated client makes .NET compare token owners,
+    // which can differ across UAC even when both processes belong to one user.
+    internal const PipeOptions ClientPipeOptions = PipeOptions.Asynchronous;
+
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(10);
     private readonly NamedPipeClientStream pipe;
     private readonly StreamWriter writer;
@@ -50,7 +55,7 @@ internal sealed class NamedPipeEventWriter : IAsyncDisposable
             serverName: ".",
             pipeName: pipeId.ToString("N"),
             direction: PipeDirection.Out,
-            options: PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly,
+            options: ClientPipeOptions,
             impersonationLevel: TokenImpersonationLevel.Identification);
 
         try

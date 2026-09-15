@@ -60,6 +60,8 @@ summary, optional email, optional plain-text log excerpt capped at 100 KB).
   authenticated checkout/cancellation and payment-backed entitlement read model.
   Sales are disabled by default until provider sandbox validation. See
   [`docs/billing.md`](../../docs/billing.md).
+- `src/discordLink.js` — short-lived account-link codes and the authenticated
+  Discord bot role-sync contract. D1 stores only code HMACs and Discord IDs.
 - `src/stats/` — `queries.js` (pure SQL+params builders, one per dashboard
   metric) and `csv.js` (pure CSV serialization for exports). In addition to
   optimization, version, hardware and failure statistics, protected aggregate
@@ -204,6 +206,17 @@ wrangler secret put FIREBASE_ADMIN_PRIVATE_KEY
 wrangler secret put MFA_RECOVERY_CODE_HMAC_SECRET
 ```
 
+Discord linking uses `POST /account/discord/link-code` for the authenticated
+Ralven account and the service-authenticated `POST /discord/link/redeem` and
+`GET /discord/role-sync` routes for the official bot. Codes expire after ten
+minutes, are single-use, and are stored only as HMAC-SHA-256 digests. Apply
+`0015_discord_account_link.sql` and configure the same distinct 32+ character
+secret in the Worker and bot before enabling the integration:
+
+```bash
+wrangler secret put RALVEN_DISCORD_BOT_SECRET
+```
+
 `GET /account/username-available?u=<name>` answers `{ "available": true|false }`
 for the registration form, so a taken name is reported while the user types
 instead of only after the Firebase account already exists. It is the one
@@ -329,6 +342,7 @@ wrangler secret put FIREBASE_WEB_API_KEY
 wrangler secret put FIREBASE_ADMIN_CLIENT_EMAIL
 wrangler secret put FIREBASE_ADMIN_PRIVATE_KEY
 wrangler secret put MFA_RECOVERY_CODE_HMAC_SECRET
+wrangler secret put RALVEN_DISCORD_BOT_SECRET
 
 wrangler d1 migrations apply TELEMETRY_DB --remote   # captures a D1 backup; touches the real database — ask first
 wrangler deploy   # touches Cloudflare — ask first

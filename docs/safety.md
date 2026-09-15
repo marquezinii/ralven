@@ -393,10 +393,12 @@ preserva as ações já `Committed` e conclui a transação como
 falha reverte só a própria ação" — é a correção de um caso em que ele não
 estava sendo respeitado entre as duas fases da mesma transação.
 
-As ações administrativas (`EnableSessionPerformancePowerPlan` e o experimento
-opt-in `ToggleHags`) não são executadas na fase de usuário padrão. O broker
-elevado valida o plano e mantém em `HKLM` a cópia autoritativa dos campos do
-journal que controlam ações administrativas. Essa cópia protegida é atualizada
+As mutações administrativas (`EnableSessionPerformancePowerPlan` e o experimento
+opt-in `ToggleHags`) não são executadas na fase de usuário padrão. A ação de
+energia pode fazer uma leitura preliminar sem elevação para reconhecer que o
+plano de alto desempenho já está ativo; qualquer mudança continua obrigatoriamente
+no broker. O broker elevado valida o plano e mantém em `HKLM` a cópia autoritativa
+dos campos do journal que controlam ações administrativas. Essa cópia protegida é atualizada
 antes do journal local a cada transição e restaura um arquivo local atrasado ou
 adulterado. Rollback elevado falha fechado quando o recibo não existe, está
 corrompido ou não corresponde à identidade das ações; recibos terminais são
@@ -485,7 +487,9 @@ A interface e a maior parte do motor executam sem elevação. O broker administr
 
 - recebe contratos tipados e versionados;
 - não aceita linha de comando ou script arbitrário;
-- restringe o pipe ao usuário atual e valida o identificador efêmero da sessão, a edição e o alvo novamente;
+- restringe o servidor do pipe ao usuário atual; o cliente elevado evita a
+  validação redundante de proprietário do .NET, que não é estável através do UAC;
+  valida o identificador efêmero da sessão, a edição e o alvo novamente;
 - usa allowlist de ações administrativas;
 - resolve caminhos do próprio lado;
 - encerra quando a sequência privilegiada termina;

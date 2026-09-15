@@ -686,6 +686,7 @@
   <data name="ReleaseNotes.Heading" xml:space="preserve"><value>What's new</value></data>
   <data name="ReleaseNotes.Acknowledge" xml:space="preserve"><value>Got it</value></data>
   <data name="ReleaseNotes.Summary" xml:space="preserve"><value>A brief overview of what changed in this release.</value></data>
+  <data name="ReleaseNotes.1_7_1.Fixed" xml:space="preserve"><value>• Fixed an issue that could prevent administrator-authorized operations from completing after the UAC confirmation.</value></data>
   <data name="ReleaseNotes.1_7_0.Added" xml:space="preserve"><value>• Added an application center to search, install, update, and uninstall supported packages with confirmation.
 • Added French interface support and two-factor authentication with recovery codes.</value></data>
   <data name="ReleaseNotes.1_7_0.Improved" xml:space="preserve"><value>• Improved FiveM Legacy detection with validated manual selection and clearer system, tray, and installer flows.
@@ -1607,6 +1608,12 @@
   <data name="Settings.Account.CurrentPasswordLabel" xml:space="preserve"><value>Current password</value></data>
   <data name="Settings.Account.RemovePhoto" xml:space="preserve"><value>Remove</value></data>
   <data name="Progress.CancelHelp" xml:space="preserve"><value>The current step finishes before stopping.</value></data>
+  <data name="Settings.Account.Discord.Title" xml:space="preserve"><value>Discord</value></data>
+  <data name="Settings.Account.Discord.Description" xml:space="preserve"><value>Link your account to receive your plan role automatically in the official server.</value></data>
+  <data name="Settings.Account.Discord.Generate" xml:space="preserve"><value>Generate code</value></data>
+  <data name="Settings.Account.Discord.Copied" xml:space="preserve"><value>Code copied. Use /vincular on Discord within 10 minutes.</value></data>
+  <data name="Settings.Account.Discord.Generated" xml:space="preserve"><value>Use the displayed code with /vincular on Discord within 10 minutes.</value></data>
+  <data name="Settings.Account.Discord.Failed" xml:space="preserve"><value>We couldn't generate a code right now. Try again.</value></data>
   <data name="Settings.Account.Security.Title" xml:space="preserve"><value>Security</value></data>
   <data name="Settings.Account.Security.Description" xml:space="preserve"><value>Manage the credential used to access your account.</value></data>
   <data name="Settings.Account.PasswordLabel" xml:space="preserve"><value>Password</value></data>

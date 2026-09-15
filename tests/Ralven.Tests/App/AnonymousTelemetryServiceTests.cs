@@ -39,6 +39,22 @@ public sealed class TelemetryErrorClassifierTests
             TelemetryErrorClassifier.ClassifyException(
                 new BrokerIntegrityException(new InvalidDataException())));
     }
+
+    [Theory]
+    [InlineData("broker-pipe-connection-failed", false, "io")]
+    [InlineData("broker-not-elevated", false, "access-denied")]
+    [InlineData("broker-invalid-arguments", false, "invalid-data")]
+    [InlineData(null, false, "unexpected")]
+    [InlineData("broker-pipe-connection-failed", true, "cancelled")]
+    public void ClassifyBrokerFailure_UsesTheMatchingFixedCategory(
+        string? errorCode,
+        bool wasCancelled,
+        string expected)
+    {
+        Assert.Equal(
+            expected,
+            TelemetryErrorClassifier.ClassifyBrokerFailure(errorCode, wasCancelled));
+    }
 }
 
 public sealed class DisabledAnonymousTelemetryServiceTests

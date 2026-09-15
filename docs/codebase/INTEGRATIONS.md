@@ -12,7 +12,7 @@
 | Vemryx / Cloudflare R2 | manifestos/download | Consulta assinada, download e página oficial de versões | público via `vemryx.com/Ralven/`; publicação usa GitHub Actions | alta | `SignedManifestUpdateService.cs`, `.github/workflows/release.yml` |
 | Sentry | observabilidade | Crash reporting sanitizado e opt-in | DSN de projeto na configuração | média | `SentryCrashReportingService.cs` |
 | Cloudflare Pages / Workers | hosting | Dashboard privado / site institucional Vemryx | deploy operacional | média | `infra/dashboard/README.md` |
-| Discord | webhook de release | Aviso pós-release | secret do GitHub Actions | baixa | `.github/workflows/discord-release.yml` |
+| Discord | webhooks de release Stable/Beta | Aviso pós-release público | GitHub Actions secrets `DISCORD_STABLE_WEBHOOK` e `DISCORD_BETA_WEBHOOK` | baixa | `.github/workflows/discord-release.yml` |
 
 ## 2) Armazenamento
 

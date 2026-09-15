@@ -136,6 +136,22 @@ public sealed class DisabledAnonymousTelemetryService : IAnonymousTelemetryServi
 /// </summary>
 public static class TelemetryErrorClassifier
 {
+    public static string ClassifyBrokerFailure(string? errorCode, bool wasCancelled)
+    {
+        if (wasCancelled)
+        {
+            return "cancelled";
+        }
+
+        return errorCode switch
+        {
+            "broker-pipe-connection-failed" => "io",
+            "broker-not-elevated" => "access-denied",
+            "broker-invalid-arguments" => "invalid-data",
+            _ => "unexpected"
+        };
+    }
+
     public static string ClassifyException(Exception exception)
     {
         ArgumentNullException.ThrowIfNull(exception);

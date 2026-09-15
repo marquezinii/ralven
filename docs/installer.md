@@ -157,7 +157,8 @@ desinstalação; gera checksums; assina e verifica os manifestos do runtime e do
 broker; aplica o schema D1; implanta e verifica o Worker, o dashboard e o feed;
 gera as notas a partir do `CHANGELOG.md`; e produz uma atestação de proveniência
 do instalador. Quando a GitHub Release é criada, um dispatch explícito aciona a
-notificação estável no Discord. O binário permanece sem assinatura de código até
+notificação estável no Discord somente após os artefatos versionados já estarem
+no R2. Publicações manuais de pre-release usam o canal beta. O binário permanece sem assinatura de código até
 existir um certificado Authenticode. SHA-256 e atestação aumentam a
 transparência, mas não substituem reputação ou uma assinatura pública.
 
@@ -190,6 +191,24 @@ Fontes oficiais usadas no desenho:
 5. Verifique a GitHub Release de notas e, em `vemryx.com/Ralven/`, o instalador,
    runtime ZIP, checksums e os dois manifestos assinados; confira também o
    dashboard publicado antes de divulgar.
+
+### Anúncios no Discord
+
+O workflow `.github/workflows/discord-release.yml` gera o anúncio público a
+partir das notas da GitHub Release. Ele só mostra as seções **Novidades**,
+**Melhorias**, **Correções** e **Segurança**; detalhes de CI, dependências e
+refactors permanecem na release completa.
+
+Antes da primeira publicação, configure os GitHub Actions secrets:
+
+- `DISCORD_STABLE_WEBHOOK`: webhook do canal público de atualizações;
+- `DISCORD_BETA_WEBHOOK`: webhook do canal privado de beta/RC.
+
+Os dois valores são URLs completas do webhook e nunca devem ser commitados,
+incluídos em logs ou reutilizados como texto de configuração. O workflow usa
+apenas eventos `published` e o dispatch emitido quando cria uma release estável;
+isso evita anúncio em edição e duplicação dentro do pipeline. Falhas do Discord
+falham o job de publicação de anúncio e ficam visíveis no GitHub Actions.
 
 O push da tag prepara automaticamente a release, mas os ambientes protegidos
 mantêm as duas confirmações humanas nos pontos que acessam chaves ou alteram

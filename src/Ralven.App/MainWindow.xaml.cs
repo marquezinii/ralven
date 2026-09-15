@@ -47,6 +47,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
     private readonly IAccountProfileService profileService;
     private readonly IAccountSecurityService accountSecurityService;
     private readonly CloudflareAccountEntitlementService? entitlementService;
+    private readonly CloudflareDiscordLinkService? discordLinkService;
     private readonly RalvenAiService? ralvenAiService;
     private readonly IGoogleOAuthClient googleOAuth;
     private HwndSource? windowSource;
@@ -83,6 +84,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             profileService = new CloudflareAccountProfileService(profileEndpoint);
             accountSecurityService = new CloudflareAccountSecurityService(profileEndpoint);
             entitlementService = new CloudflareAccountEntitlementService(profileEndpoint);
+            // Keep the account action hidden until the official bot and matching Worker secret are deployed.
+            discordLinkService = null;
             billingService = new CloudflareBillingService(profileEndpoint);
             ralvenAiService = new RalvenAiService(profileEndpoint);
         }
@@ -91,6 +94,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             profileService = new DisabledAccountProfileService();
             accountSecurityService = new DisabledAccountSecurityService();
             entitlementService = null;
+            discordLinkService = null;
             billingService = null;
             ralvenAiService = null;
         }

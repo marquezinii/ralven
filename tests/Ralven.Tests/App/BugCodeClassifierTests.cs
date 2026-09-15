@@ -37,5 +37,8 @@ public sealed class BugCodeClassifierTests
         Assert.Equal(
             BugCode.BRK_REQUEST_VALIDATION,
             BugCodeClassifier.ClassifyBrokerFailure("plan-expired", wasCancelled: false));
+        Assert.Equal(
+            BugCode.BRK_IPC_COMMUNICATION,
+            BugCodeClassifier.ClassifyBrokerFailure("broker-pipe-connection-failed", wasCancelled: false));
     }
 }

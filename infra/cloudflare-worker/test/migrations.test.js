@@ -442,6 +442,40 @@ test('MFA recovery migration removes recovery codes but preserves revocation and
   `, false);
 });
 
+test('Discord links enforce one account per user and cascade account deletion', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'Ralven-d1-discord-link-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const stateDirectory = join(root, 'state');
+  const config = await createFixture(root, 'current', migrationNames);
+  apply(config, stateDirectory);
+
+  const result = execute(config, stateDirectory, `
+    INSERT INTO account_profiles
+      (uid, username, username_normalized, first_name, last_name, terms_version, terms_accepted_at, created_at)
+    VALUES
+      ('discord-user', 'DiscordUser', 'discorduser', 'Discord', 'User', 'v1',
+       '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z'),
+      ('discord-other', 'DiscordOther', 'discordother', 'Discord', 'Other', 'v1',
+       '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+    INSERT INTO discord_link_codes (code_hash, account_uid, expires_at, created_at)
+    VALUES ('${'a'.repeat(43)}', 'discord-user', '2026-01-01T00:10:00.000Z', '2026-01-01T00:00:00.000Z');
+    INSERT INTO discord_account_links (account_uid, discord_user_id, created_at, updated_at)
+    VALUES ('discord-user', '12345678901234567', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+    INSERT OR IGNORE INTO discord_account_links (account_uid, discord_user_id, created_at, updated_at)
+    VALUES ('discord-other', '12345678901234567', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z');
+    SELECT account_uid, discord_user_id FROM discord_account_links;
+    DELETE FROM account_profiles WHERE uid = 'discord-user';
+    SELECT
+      (SELECT COUNT(*) FROM discord_link_codes) AS code_count,
+      (SELECT COUNT(*) FROM discord_account_links) AS link_count;
+  `);
+  const populated = result.filter(statement => statement.results.length > 0);
+  assert.deepEqual(populated.at(-2).results, [
+    { account_uid: 'discord-user', discord_user_id: '12345678901234567' },
+  ]);
+  assert.deepEqual(populated.at(-1).results, [{ code_count: 0, link_count: 0 }]);
+});
+
 test('a failed D1 migration is atomic and is not recorded as applied', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'Ralven-d1-atomicity-'));
   t.after(() => rm(root, { recursive: true, force: true }));

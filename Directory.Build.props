@@ -19,7 +19,7 @@
     <Product>Ralven</Product>
     <AssemblyTitle>Ralven — AI-powered Windows Management Platform</AssemblyTitle>
     <Description>AI-powered Windows management and optimization platform.</Description>
-    <Version>1.7.0</Version>
+    <Version>1.7.1</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Meziantou.Analyzer" PrivateAssets="all" />

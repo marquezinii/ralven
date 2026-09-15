@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="coverlet.MTP" Version="10.0.1" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.235" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.257" />
     <PackageVersion Include="Microsoft.Testing.Platform" Version="2.3.3" />
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
     <PackageVersion Include="Sentry" Version="6.8.0" />
