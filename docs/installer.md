@@ -194,26 +194,9 @@ Fontes oficiais usadas no desenho:
 
 ### Anúncios no Discord
 
-O workflow `.github/workflows/discord-release.yml` gera o anúncio público a
-partir das notas da GitHub Release. Ele só mostra as seções **Novidades**,
-**Melhorias**, **Correções** e **Segurança**; detalhes de CI, dependências e
-refactors permanecem na release completa.
-
-Antes da primeira publicação, configure os GitHub Actions secrets:
-
-- `DISCORD_STABLE_WEBHOOK`: webhook do canal público de atualizações;
-- `DISCORD_BETA_WEBHOOK`: webhook do canal privado de beta/RC.
-- `DISCORD_ROADMAP_WEBHOOK`: webhook do canal público de roadmap.
-
-Os valores são URLs completas do webhook e nunca devem ser commitados,
-incluídos em logs ou reutilizados como texto de configuração. O workflow usa
-apenas eventos `published` e o dispatch emitido quando cria uma release estável;
-isso evita anúncio em edição e duplicação dentro do pipeline. Falhas do Discord
-falham o job de publicação de anúncio e ficam visíveis no GitHub Actions.
-
-O workflow de roadmap só é acionado quando um pull request mesclado em
-`dev/proxima-versao` altera `docs/public-roadmap.json`; merges técnicos não são
-divulgados como funcionalidade.
+O bot oficial consulta as releases e o roadmap público e publica os avisos com
+a própria identidade no Discord. Não use webhooks de release: eles publicariam
+como uma integração separada e duplicariam as mensagens do bot.
 
 O push da tag prepara automaticamente a release, mas os ambientes protegidos
 mantêm as duas confirmações humanas nos pontos que acessam chaves ou alteram
