@@ -1,4 +1,5 @@
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+// The 32-symbol alphabet maps bytes uniformly through their low five bits.
 const CODE_ALPHABET_MASK = CODE_ALPHABET.length - 1;
 if ((CODE_ALPHABET.length & CODE_ALPHABET_MASK) !== 0) throw new Error('discord-link-code-alphabet-must-be-power-of-two');
 const CODE_LENGTH = 10;
