@@ -84,7 +84,8 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             profileService = new CloudflareAccountProfileService(profileEndpoint);
             accountSecurityService = new CloudflareAccountSecurityService(profileEndpoint);
             entitlementService = new CloudflareAccountEntitlementService(profileEndpoint);
-            discordLinkService = new CloudflareDiscordLinkService(profileEndpoint);
+            // Keep the account action hidden until the official bot and matching Worker secret are deployed.
+            discordLinkService = null;
             billingService = new CloudflareBillingService(profileEndpoint);
             ralvenAiService = new RalvenAiService(profileEndpoint);
         }

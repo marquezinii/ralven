@@ -2025,6 +2025,7 @@ Exceção: {3}
   <data name="Pro.Development.Action" xml:space="preserve"><value>Em breve</value></data>
   <data name="Pro.DiscoverDevelopment" xml:space="preserve"><value>Conheça o Ralven Pro · Em breve</value></data>
   <data name="Navigation.ProDevelopment" xml:space="preserve"><value>Pro · Em breve</value></data>
+  <data name="ReleaseNotes.1_7_1.Fixed" xml:space="preserve"><value>• Corrigido um problema que podia impedir a conclusão de operações autorizadas pelo administrador após a confirmação do UAC.</value></data>
   <data name="ReleaseNotes.1_7_0.Added" xml:space="preserve"><value>• Adicionado um centro de Aplicativos para pesquisar, instalar, atualizar e desinstalar pacotes suportados com confirmação.
 • Adicionado suporte da interface em francês e autenticação em dois fatores com códigos de recuperação.</value></data>
   <data name="ReleaseNotes.1_7_0.Improved" xml:space="preserve"><value>• Melhorada a detecção do FiveM Legacy com seleção manual validada e fluxos mais claros em Sistema, bandeja e instalador.

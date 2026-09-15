@@ -600,6 +600,7 @@
                                                         x:Name="DiscordLinkButton"
                                                         Content="{Binding [Settings.Account.Discord.Generate], Source={StaticResource LocalizedStrings}}"
                                                         Style="{StaticResource SecondaryButtonStyle}"
+                                                        Visibility="Collapsed"
                                                         VerticalAlignment="Center"
                                                         Click="DiscordLink_Click" />
                                             </Grid>
