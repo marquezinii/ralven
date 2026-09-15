@@ -51,6 +51,14 @@ public sealed record RemoteServicesOptions
     public string? FirebaseApiKey { get; init; }
 
     /// <summary>
+    /// Enables TOTP enrollment only after Firebase Authentication with
+    /// Identity Platform and the matching Worker recovery secrets are live.
+    /// The default is fail-closed so an incomplete backend is never offered
+    /// as a working security control.
+    /// </summary>
+    public bool FirebaseTotpEnabled { get; init; }
+
+    /// <summary>
     /// OAuth 2.0 client id of the Google Cloud "Desktop app" credential used
     /// by <see cref="GoogleOAuthClient"/>. Absent means the account window
     /// simply does not offer "Continuar com o Google" — the button is hidden
@@ -158,6 +166,7 @@ public static class RemoteServicesOptionsLoader
                 AccountProfileEndpoint = overlay.AccountProfileEndpoint ?? options.AccountProfileEndpoint,
                 LiveAlertEndpoint = overlay.LiveAlertEndpoint ?? options.LiveAlertEndpoint,
                 FirebaseApiKey = overlay.FirebaseApiKey ?? options.FirebaseApiKey,
+                FirebaseTotpEnabled = overlay.FirebaseTotpEnabled ?? options.FirebaseTotpEnabled,
                 GoogleOAuthClientId = overlay.GoogleOAuthClientId ?? options.GoogleOAuthClientId,
                 GoogleOAuthClientSecret = overlay.GoogleOAuthClientSecret ?? options.GoogleOAuthClientSecret,
             };
@@ -177,6 +186,7 @@ public static class RemoteServicesOptionsLoader
         public string? AccountProfileEndpoint { get; init; }
         public string? LiveAlertEndpoint { get; init; }
         public string? FirebaseApiKey { get; init; }
+        public bool? FirebaseTotpEnabled { get; init; }
         public string? GoogleOAuthClientId { get; init; }
         public string? GoogleOAuthClientSecret { get; init; }
     }

@@ -206,6 +206,13 @@ wrangler secret put FIREBASE_ADMIN_PRIVATE_KEY
 wrangler secret put MFA_RECOVERY_CODE_HMAC_SECRET
 ```
 
+TOTP enrollment additionally requires Firebase Authentication with Identity
+Platform. The desktop setting stays hidden while `firebaseTotpEnabled` is
+`false`; enable it in the shipped app configuration only after Identity
+Platform and all four Worker secrets above are operational. An account that
+already has a TOTP factor can still open the management flow while the flag is
+off, so disabling the rollout flag cannot strand an existing account.
+
 Discord linking uses `POST /account/discord/link-code` for the authenticated
 Ralven account and the service-authenticated `POST /discord/link/redeem` and
 `GET /discord/role-sync` routes for the official bot. Codes expire after ten

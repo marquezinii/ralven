@@ -642,7 +642,7 @@
                                             </Grid>
                                         </Border>
 
-                                        <Border Style="{StaticResource SettingRowStyle}" BorderThickness="0">
+                                        <Border x:Name="AccountSettingsMfaPanel" Style="{StaticResource SettingRowStyle}" BorderThickness="0">
                                             <Grid>
                                                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                                 <StackPanel>

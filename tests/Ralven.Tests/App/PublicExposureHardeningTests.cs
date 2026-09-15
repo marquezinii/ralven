@@ -64,6 +64,49 @@ public sealed class PublicExposureHardeningTests
     }
 
     [Fact]
+    public void StableRelease_RequiresAccountSecretsBeforeWorkerDeployment()
+    {
+        var root = FindRepositoryRoot();
+        var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "release.yml"));
+
+        var secretPreflight = workflow.IndexOf("wrangler secret list --format json", StringComparison.Ordinal);
+        var deploy = workflow.IndexOf("wrangler deploy", StringComparison.Ordinal);
+
+        Assert.True(secretPreflight >= 0, "Production releases must inspect Worker secrets.");
+        Assert.True(deploy > secretPreflight, "Account secrets must be checked before Worker deployment.");
+        Assert.Contains("FIREBASE_WEB_API_KEY", workflow, StringComparison.Ordinal);
+        Assert.Contains("FIREBASE_ADMIN_CLIENT_EMAIL", workflow, StringComparison.Ordinal);
+        Assert.Contains("FIREBASE_ADMIN_PRIVATE_KEY", workflow, StringComparison.Ordinal);
+        Assert.Contains("MFA_RECOVERY_CODE_HMAC_SECRET", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProductionSmoke_ExercisesAuthenticatedAccountBackendAndCleansFirebaseUser()
+    {
+        var root = FindRepositoryRoot();
+        var smoke = File.ReadAllText(Path.Combine(root, "scripts", "Test-ProductionDiagnostics.ps1"));
+
+        Assert.Contains("accounts:signUp", smoke, StringComparison.Ordinal);
+        Assert.Contains("accountProfileEndpoint", smoke, StringComparison.Ordinal);
+        Assert.Contains("Authorization = \"Bearer $firebaseIdToken\"", smoke, StringComparison.Ordinal);
+        Assert.Contains("accounts:delete", smoke, StringComparison.Ordinal);
+        Assert.Contains("finally", smoke, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProductionTotpActivation_RequiresTheGuardedAccountUi()
+    {
+        var root = FindRepositoryRoot();
+        var config = File.ReadAllText(Path.Combine(root, "src", "Ralven.App", "Config", "appsettings.Production.json"));
+        var accountUi = File.ReadAllText(Path.Combine(root, "src", "Ralven.App", "MainWindow.Account.xaml.cs"));
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "Ralven.App", "MainWindow.xaml"));
+
+        Assert.Contains("\"firebaseTotpEnabled\": true", config, StringComparison.Ordinal);
+        Assert.Contains("remoteServicesOptions.FirebaseTotpEnabled", accountUi, StringComparison.Ordinal);
+        Assert.Contains("x:Name=\"AccountSettingsMfaPanel\"", xaml, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void StableRelease_HardensAndSmokeTestsTheRuntimeBeforePublication()
     {
         var root = FindRepositoryRoot();

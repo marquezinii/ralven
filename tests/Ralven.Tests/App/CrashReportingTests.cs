@@ -169,6 +169,21 @@ public sealed class RemoteServicesOptionsLoaderTests : IDisposable
     }
 
     [Fact]
+    public void Load_TrackedTotpCapability_IsDisabledUnlessExplicitlyEnabled()
+    {
+        WriteConfigFile(
+            "appsettings.Production.json",
+            """{ "environment": "Production", "firebaseTotpEnabled": true }""");
+
+        var enabled = RemoteServicesOptionsLoader.Load(AppRuntimeEnvironment.Production, tempDirectory);
+        File.Delete(Path.Combine(tempDirectory, "Config", "appsettings.Production.json"));
+        var fallback = RemoteServicesOptionsLoader.Load(AppRuntimeEnvironment.Production, tempDirectory);
+
+        Assert.True(enabled.FirebaseTotpEnabled);
+        Assert.False(fallback.FirebaseTotpEnabled);
+    }
+
+    [Fact]
     public void Load_LocalOverlayHasANullField_DoesNotClearTheTrackedValue()
     {
         WriteConfigFile(

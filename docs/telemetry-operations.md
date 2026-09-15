@@ -35,8 +35,14 @@ rota autorizados.
   backup D1 dessa operação;
 - execute `scripts/Test-ProductionDiagnostics.ps1`: o gate envia um evento
   anônimo sintético, confirma o contrato completo no D1 usado pelo dashboard e
-  remove a linha; também envia um crash sintético marcado
+  remove a linha; cria também uma conta Firebase sintética, exige que o Worker
+  aceite seu token em `/account/profile` e remove a conta no `finally`; também
+  envia um crash sintético marcado
   `ralven.release_smoke=true` e exige o aceite do Sentry;
+- antes das migrations e do deploy, confirme pelo preflight do workflow que os
+  quatro secrets obrigatórios de contas (`FIREBASE_WEB_API_KEY`,
+  `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY` e
+  `MFA_RECOVERY_CODE_HMAC_SECRET`) existem no Worker;
 - instale o artefato Release, dê consentimento e execute uma otimização
   controlada; registre versão, horário UTC e identificador de smoke test;
 - confirme o `202` no Worker, a linha no D1 e a visibilidade no dashboard;
