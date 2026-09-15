@@ -86,8 +86,8 @@
         "en": "Safer accounts and access"
       },
       "description": {
-        "pt": "Senha e Google podem ser vinculados com reautenticação, mudanças sensíveis ganham validação consistente e a conta passa a oferecer autenticação de dois fatores TOTP com códigos de recuperação de uso único. Um código temporário também permite vincular a conta ao Discord oficial e sincronizar o cargo do plano sem expor e-mail.",
-        "en": "Password and Google can be linked with reauthentication, sensitive changes gain consistent validation, and accounts add TOTP two-factor authentication with single-use recovery codes. A temporary code also links the account to the official Discord and syncs its plan role without exposing email."
+        "pt": "Senha e Google podem ser vinculados com reautenticação, mudanças sensíveis ganham validação consistente e a conta passa a oferecer autenticação de dois fatores TOTP com códigos de recuperação de uso único. A base para vincular a conta ao Discord sem expor e-mail está preparada e será habilitada junto do bot oficial.",
+        "en": "Password and Google can be linked with reauthentication, sensitive changes gain consistent validation, and accounts add TOTP two-factor authentication with single-use recovery codes. The foundation for linking accounts to Discord without exposing email is ready and will be enabled with the official bot."
       }
     },
     {

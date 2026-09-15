@@ -7,8 +7,8 @@
 
 - **Produto:** Ralven, plataforma de gerenciamento e otimização do Windows com IA, transparente, reversível e orientada por diagnóstico. FiveM para **GTAV Legacy** é a integração especializada atual da área de Jogos.
 - **Integração:** `dev/proxima-versao` é a branch de integração da próxima versão; `main` representa a linha pública/estável. O fluxo de branches, worktrees, Pull Requests, integração e release é definido em `AI_RULES.md`.
-- **Último estado consolidado:** 14/09/2026, após os PRs #206, #208–#210: analyzer atualizado, comunicação elevada do broker corrigida, anúncios de release do Discord reorganizados e vínculo seguro entre conta Ralven e cargos de plano no Discord preparado. Pro e Ralven AI continuam bloqueados, sem compra, ativação ou cobrança. Confirme o estado real com Git e testes atuais antes de trabalhar.
-- **Release pública atual:** `v1.7.0`, publicada a partir de `main`. A próxima versão só é definida no fluxo oficial de release a partir das mudanças posteriores a essa tag.
+- **Último estado consolidado:** 14/09/2026: comunicação elevada do broker corrigida, anúncios de release do Discord reorganizados, analyzer atualizado e infraestrutura segura de vínculo entre conta Ralven e cargos de plano preparada para ativação posterior. Pro, Ralven AI e o vínculo Discord continuam bloqueados enquanto suas dependências operacionais não estiverem configuradas. Confirme o estado real com Git e testes atuais antes de trabalhar.
+- **Release pública atual:** `v1.7.1`, publicada a partir de `main`. A próxima versão só é definida no fluxo oficial de release a partir das mudanças posteriores a essa tag.
 - **Atalho de desenvolvimento:** `Ralven - Desenvolvimento` usa `scripts\Start-DevelopmentApp.ps1`. Conforme `AI_RULES.md`, deve ser reconstruído com `scripts\Install-DevelopmentShortcut.ps1 -Build` quando aplicável. O script espelha a árvore para a pasta irmã fixa `Ralven-dev-shortcut`, sem ficar órfão após a remoção de um worktree.
 
 ## 2. Objetivo e invariantes de segurança
@@ -91,14 +91,14 @@ Preferências, journals, solicitações efêmeras, filas e logs locais ficam sob
 - O Worker valida RS256/JWKS, `aud`, `iss`, expiração e `sub`; o Firebase UID é a identidade permanente. Perfil complementar e username único ficam em D1.
 - Sessão completa exige e-mail verificado, perfil e termos vigentes. Mudanças sensíveis exigem reautenticação; a última forma de acesso não pode ser removida.
 - Códigos TOTP de recuperação são exibidos uma vez e armazenados somente como HMAC; seu uso remove o fator perdido e revoga sessões.
-- A conta pode gerar um código Discord de dez minutos e uso único. O Worker persiste somente o HMAC e o ID numérico vinculado; o bot oficial consulta cargos Free/Pro/Max derivados dos entitlements por rotas com segredo de serviço.
+- A infraestrutura de vínculo Discord usa código de dez minutos e uso único; o Worker persiste somente o HMAC e o ID numérico vinculado. A interface permanece oculta até o bot oficial e o segredo de serviço compartilhado estarem configurados.
 - O card de conta lê Free/Pro de `GET /account/entitlements`, autenticado pelo mesmo ID token, sem expor dados do provedor de pagamento. Avatar permanece somente local.
 
 ### Telemetria, backend e operações
 
 - `/telemetry`, `POST /bugs`, `GET /api/bugs` e o aviso ao vivo estão ativos. Bug reports são texto, e-mail/log opcionais e não usam anexo/R2.
 - Privacidade está na versão **9**: diagnósticos essenciais são allowlisted; dados detalhados e crash reports sanitizados compartilham a opção Relatórios opcionais. Falhas remotas nunca alteram a otimização.
-- O CI de integração já publicou o código consumidor do Worker em `dev/proxima-versao`; as migrations D1 `0008`–`0015` — alertas, 2FA, correlação v9 e vínculo Discord — continuam pendentes de aplicação remota controlada antes da ativação dessas funções.
+- O fluxo protegido de release aplica as migrations D1 pendentes antes de publicar o feed estável. O vínculo Discord permanece inativo independentemente do schema enquanto o bot oficial e seu segredo de serviço não estiverem configurados.
 - O dashboard privado usa sessão opaca revogável, CSRF/origem exata para mutações, CSP/anti-frame e consultas agregadas sem conteúdo interativo ou identificadores de conta/provedor.
 - Cobrança Asaas permanece fail-closed e desativada (`ASAAS_BILLING_ENABLED = "false"`). Preço vem do servidor e pagamentos só concedem entitlement após revalidação canônica; ver `docs/billing.md`.
 - `POST /ai/message` exige Pro + `ralven_ai`, e-mail verificado, rate limit, idempotência e orçamento D1. A rota e a UI continuam desativadas; o modelo não recebe ferramentas nem acesso ao Windows.
@@ -126,7 +126,7 @@ Somente itens ainda relevantes devem permanecer aqui. Quando resolvidos e integr
 
 Estes números são **referência do último estado validado**, não substituem testes da branch atual.
 
-- **14/09/2026 — `dev/proxima-versao`:** build Release sem avisos; **1.599 testes .NET**, **296 testes do Worker/D1**, **63 do dashboard** e **3 do site** aprovados, além de format, segurança, lint, typecheck e audits sem falhas. Build portátil, instalador e smoke são validados separadamente antes da conclusão da integração.
+- **14/09/2026 — `v1.7.1`:** build Release sem avisos; **1.599 testes .NET**, **296 testes do Worker/D1**, **63 do dashboard** e **3 do site** aprovados, além de format, segurança, lint, typecheck e audits sem falhas. Build portátil, instalador e smoke são validados pelo fluxo de publicação protegido.
 
 ## 7. Comandos essenciais
 

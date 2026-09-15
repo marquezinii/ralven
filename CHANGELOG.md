@@ -5,6 +5,21 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/): correções usam
 `patch`, melhorias compatíveis usam `minor` e mudanças incompatíveis usam
 `major`.
 
+## [1.7.1] - 2026-09-14
+
+### Corrigido
+
+- Corrigida uma falha que podia impedir operações autorizadas pelo
+  administrador de concluir após a confirmação do UAC.
+
+### Alterações técnicas
+
+- Preparado o vínculo seguro entre conta e Discord para ativação posterior,
+  mantendo a interface oculta enquanto o bot oficial e seu segredo de serviço
+  não estiverem configurados.
+- Reorganizada a automação de anúncios de release no Discord e atualizado o
+  analisador estático compatível do código .NET.
+
 ## [1.7.0] - 2026-09-11
 
 ### Adicionado
