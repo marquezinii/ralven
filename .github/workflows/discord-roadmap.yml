@@ -1,0 +1,62 @@
+name: Discord - roadmap público
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [dev/proxima-versao]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: discord-roadmap-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  notify-discord:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Confirmar alteração pública do roadmap
+        id: roadmap
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PULL_REQUEST: ${{ github.event.pull_request.number }}
+        run: |
+          changed_files="$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST/files?per_page=100" --jq '.[].filename')"
+          if grep --fixed-strings --quiet 'docs/public-roadmap.json' <<< "$changed_files"; then
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publicar atualização do roadmap
+        if: steps.roadmap.outputs.changed == 'true'
+        shell: bash
+        env:
+          DISCORD_ROADMAP_WEBHOOK: ${{ secrets.DISCORD_ROADMAP_WEBHOOK }}
+        run: |
+          [[ -n "$DISCORD_ROADMAP_WEBHOOK" ]] || { echo 'O secret DISCORD_ROADMAP_WEBHOOK não está configurado.' >&2; exit 1; }
+          payload="$(jq -cn '{
+            username: "Ralven Roadmap",
+            allowed_mentions: {parse: []},
+            embeds: [{
+              title: "🗺️ Roadmap atualizado",
+              url: "https://vemryx.com/Ralven/",
+              description: "Uma capacidade em desenvolvimento recebeu uma atualização no roadmap público. O escopo e a ordem podem evoluir antes da próxima versão.",
+              color: 3110655,
+              fields: [{name: "Acompanhe", value: "[Ver o roadmap da próxima versão](https://vemryx.com/Ralven/)", inline: false}],
+              footer: {text: "Ralven © 2026 • Desenvolvido pela Vemryx"}
+            }]
+          }')"
+          separator='?'
+          [[ "$DISCORD_ROADMAP_WEBHOOK" == *'?'* ]] && separator='&'
+          curl --fail-with-body --silent --show-error \
+            --retry 2 --retry-all-errors \
+            --header 'Content-Type: application/json' \
+            --data "$payload" \
+            "${DISCORD_ROADMAP_WEBHOOK}${separator}wait=true" > /dev/null
