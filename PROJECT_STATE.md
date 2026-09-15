@@ -98,7 +98,7 @@ Preferências, journals, solicitações efêmeras, filas e logs locais ficam sob
 
 - `/telemetry`, `POST /bugs`, `GET /api/bugs` e o aviso ao vivo estão ativos. Bug reports são texto, e-mail/log opcionais e não usam anexo/R2.
 - Privacidade está na versão **9**: diagnósticos essenciais são allowlisted; dados detalhados e crash reports sanitizados compartilham a opção Relatórios opcionais. Falhas remotas nunca alteram a otimização.
-- As migrations `0008`–`0015` — alertas, 2FA, correlação v9 e vínculo Discord — e seus consumidores ainda exigem um próximo deploy controlado conjunto.
+- O CI de integração já publicou o código consumidor do Worker em `dev/proxima-versao`; as migrations D1 `0008`–`0015` — alertas, 2FA, correlação v9 e vínculo Discord — continuam pendentes de aplicação remota controlada antes da ativação dessas funções.
 - O dashboard privado usa sessão opaca revogável, CSRF/origem exata para mutações, CSP/anti-frame e consultas agregadas sem conteúdo interativo ou identificadores de conta/provedor.
 - Cobrança Asaas permanece fail-closed e desativada (`ASAAS_BILLING_ENABLED = "false"`). Preço vem do servidor e pagamentos só concedem entitlement após revalidação canônica; ver `docs/billing.md`.
 - `POST /ai/message` exige Pro + `ralven_ai`, e-mail verificado, rate limit, idempotência e orçamento D1. A rota e a UI continuam desativadas; o modelo não recebe ferramentas nem acesso ao Windows.
