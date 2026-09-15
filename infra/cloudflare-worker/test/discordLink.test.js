@@ -46,8 +46,8 @@ test('Discord role sync maps authoritative entitlements to exclusive tiers', asy
   assert.deepEqual(bound, [now, now]);
 });
 
-test('Discord link codes are stored as digests and can be redeemed only once', async () => {
-  const state = { codeHash: null, uid: null, used: false, discordUserId: null };
+test('Discord link codes replace prior codes, store only digests, and can be redeemed only once', async () => {
+  const state = { codeHash: null, uid: null, used: false, discordUserId: null, deletedUid: null };
   const statement = sql => ({
     parameters: [],
     bind(...parameters) {
@@ -55,6 +55,9 @@ test('Discord link codes are stored as digests and can be redeemed only once', a
       return this;
     },
     async run() {
+      if (sql === 'DELETE FROM discord_link_codes WHERE account_uid = ?') {
+        [state.deletedUid] = this.parameters;
+      }
       if (sql.startsWith('UPDATE discord_link_codes')) {
         const [, hash] = this.parameters;
         if (hash !== state.codeHash || state.used) return { meta: { changes: 0 } };
@@ -77,6 +80,7 @@ test('Discord link codes are stored as digests and can be redeemed only once', a
   };
   const secret = 'a-test-secret-with-at-least-32-characters';
   const created = await createDiscordLinkCode(db, 'firebase-uid', secret, new Date('2026-09-14T12:00:00Z'));
+  assert.equal(state.deletedUid, 'firebase-uid');
   assert.equal(state.codeHash.includes(created.code), false);
   assert.deepEqual(
     await redeemDiscordLinkCode(db, created.code, '12345678901234567', secret, new Date('2026-09-14T12:01:00Z')),

@@ -7,7 +7,7 @@
 
 - **Produto:** Ralven, plataforma de gerenciamento e otimização do Windows com IA, transparente, reversível e orientada por diagnóstico. FiveM para **GTAV Legacy** é a integração especializada atual da área de Jogos.
 - **Integração:** `dev/proxima-versao` é a branch de integração da próxima versão; `main` representa a linha pública/estável. O fluxo de branches, worktrees, Pull Requests, integração e release é definido em `AI_RULES.md`.
-- **Último estado consolidado:** 11/09/2026, após a integração dos PRs #178–#201: correções de contraste, foco, bandeja e visão geral; experiência de falhas e notas de versão; Command Center do dashboard; detecção FiveM Legacy em camadas com seleção manual validada; fila de telemetria ordenada; atualizações compatíveis de dependências e publicação contínua do dashboard. Pro e Ralven AI permanecem bloqueados como recursos em desenvolvimento, sem compra, ativação ou cobrança. O handoff de tarefas agora vive no corpo do PR, sem `OBJECTIVE.md` obrigatório na raiz. Confirme o estado real com Git e testes atuais antes de trabalhar.
+- **Último estado consolidado:** 14/09/2026, após os PRs #206, #208–#210: analyzer atualizado, comunicação elevada do broker corrigida, anúncios de release do Discord reorganizados e vínculo seguro entre conta Ralven e cargos de plano no Discord preparado. Pro e Ralven AI continuam bloqueados, sem compra, ativação ou cobrança. Confirme o estado real com Git e testes atuais antes de trabalhar.
 - **Release pública atual:** `v1.7.0`, publicada a partir de `main`. A próxima versão só é definida no fluxo oficial de release a partir das mudanças posteriores a essa tag.
 - **Atalho de desenvolvimento:** `Ralven - Desenvolvimento` usa `scripts\Start-DevelopmentApp.ps1`. Conforme `AI_RULES.md`, deve ser reconstruído com `scripts\Install-DevelopmentShortcut.ps1 -Build` quando aplicável. O script espelha a árvore para a pasta irmã fixa `Ralven-dev-shortcut`, sem ficar órfão após a remoção de um worktree.
 
@@ -63,82 +63,53 @@ Preferências, journals, solicitações efêmeras, filas e logs locais ficam sob
 
 ## 4. Estado funcional relevante
 
-### Interface
+### Interface e produto
 
-- Aplicação WPF com WPF-UI/Fluent, Mica, tema claro/escuro/sistema e localização.
-- A identidade pública descreve o Ralven como plataforma de gerenciamento e otimização do Windows com IA; FiveM/GTAV Legacy permanece uma integração especializada, não a definição do produto.
-- Catálogos declarativos mantêm inglês, português do Brasil, espanhol e francês para App, Updater e camada Windows. O seletor usa o catálogo, segue o Windows quando automático e a CI recusa chaves, placeholders ou revisões de tradução divergentes; a pseudo-localização é usada para inspeção visual.
-- Botões, switches, diálogos, cards e estados de configuração seguem os componentes compartilhados atuais. O shell preserva fallback visual em Windows 10 sem reduzir as proteções ou o comportamento de Windows 11.
-- Janela principal inicia/restaura maximizada e preserva comportamento de bandeja.
-- Configurações reúne inicialização/bandeja, aparência e idioma, privacidade, atualizações e conta; o idioma automático aparece como **Idioma do sistema**.
-- Configurações também concentra restauração explícita de preferências, limpeza opt-in apenas de cache descartável do Ralven (com confirmação e preservação de conta, histórico, rollback e telemetria pendente), comportamento de bandeja e controles de aviso/atualização.
-- Visão geral apresenta diagnóstico/prontidão e monitoramento local de recursos; a coleta só fica ativa quando a página está visível, a janela está ativa e não está minimizada, cancelando amostras em curso sem aplicar resultados antigos.
-- O painel ao vivo mostra CPU, GPU, memória, disco e rede em gráficos acessíveis, com escala por métrica, status semântico e histórico local; não usa hook, injeção ou mede FPS dentro do FiveM.
-- O hub de Jogos/FiveM concentra o monitor local e somente leitura da sessão FiveM; ele continua ativo na bandeja quando iniciado explicitamente, sem hook, leitura de memória ou mutação automática.
-- Aba **Sistema** organiza diagnóstico essencial do PC, saúde agregada somente leitura de antivírus, firewall e atualizações automáticas da Central de Segurança do Windows e controles reais de jogos do Windows (Modo de Jogos, captura em segundo plano). Não abre superfícies externas; as duas alterações em HKCU allowlisted preservam snapshot/journal/rollback via `WindowsTransactionEngine` e refresh ao voltar para a página. Indisponibilidade da API é explícita e nunca vira afirmação de proteção.
-- Aba **Aplicativos** apresenta três fluxos principais para usuários comuns — atualizar, instalar e desinstalar —, com detalhes técnicos (ID do pacote, origem) disponíveis sob demanda em "Mostrar detalhes técnicos" e inventário/atalhos nativos do Windows recolhidos em "Mais opções". O inventário não executa `UninstallString`, não altera `StartupApproved` nem escreve no Registro; o diálogo de confirmação sempre mostra nome, ID e origem antes de qualquer mutação.
-- Aba **Jogos** é o catálogo de títulos compatíveis; hoje abre um hub dedicado do FiveM sobre GTAV Legacy, com acessos distintos ao otimizador especializado, ao otimizador geral, ao histórico/restauração, ao monitor local da sessão e ao download oficial do ReShade — sem redistribuir/executar instaladores, habilitar outros jogos ou GTAV Enhanced.
-- A descoberta de FiveM combina fontes conhecidas e valida candidatos de forma determinística; quando não encontra uma instalação Legacy válida, permite selecionar manualmente apenas uma pasta que contenha `FiveM.exe` e `FiveM.app\data`. GTAV Enhanced continua bloqueado com segurança.
-- O rodapé de navegação mostra somente a versão instalada em um card compacto; o status genérico de proteção foi removido.
-- Página **Ralven Pro** localizada mantém a comparação entre Free e Pro e seus benefícios, mas o cliente os apresenta como em desenvolvimento, com cadeados: não oferece compra, ativação, atualização ou cancelamento enquanto `ProFeatureAvailability.Enabled` permanecer `false`. A infraestrutura de cobrança (oferta controlada pelo servidor e checkout hospedado Asaas) continua preservada e as vendas seguem desativadas (`ASAAS_BILLING_ENABLED = "false"`) até a ativação operacional. Ver `docs/billing.md` e `docs/asaas-setup.md`.
-- Página **Ralven AI** mantém a orientação contextual em linguagem natural a partir do diagnóstico/catálogo já conhecidos, com conversa somente em memória e revisão explícita do perfil recomendado antes de qualquer aplicação, mas a interface e as requisições ficam bloqueadas enquanto o Pro estiver em desenvolvimento. Quando ativado, o acesso exigirá entitlement `ralven_ai` separado do Pro, e-mail verificado, flag explícita e orçamento server-side. O modelo nunca recebe acesso ao Windows nem executa nada diretamente. Ver `docs/ralven-ai.md`.
-- Revisão do plano do Otimizador detalha por ação: como é detectada, o que a confirmação verifica, como é desfeita e riscos/limitações; texto cai no conteúdo do catálogo quando a chave de localização não existe.
-- Aba **Otimizador** oferece o plano geral `GeneralWindows` na trilha Preparar → Executar → Resultado e preserva a experiência especializada `FiveMLegacy` em Jogos. `OptimizerPage` (compartilhada pelos dois fluxos) usa hierarquia progressiva: benefício/impacto ficam na leitura principal; risco, acesso, verificação, rollback e limitações ficam sob detalhes técnicos expansíveis, sem remover conteúdo. O modo Personal Pro, seu acompanhamento local opt-in e suas medições comparáveis permanecem visíveis, mas bloqueados como em desenvolvimento; não iniciam operações até a ativação do Pro.
-- Nos perfis padrão, cache/reparo permanece opt-in: Leve limita mutações a limpeza temporária segura e Modo de Jogo; Médio adiciona captura, energia e ajustes moderados reversíveis; Agressivo adiciona somente o conjunto conservador de aparência/responsividade. O perfil FiveM mantém ações próprias de GTAV Legacy e bloqueia com segurança processos/sessões incompatíveis.
-- Painel de **Notas da Versão** (`ReleaseNotesWindow`) é exibido automaticamente após um update bem-sucedido, controlado por `ReleaseNotesEvaluator`/`ReleaseNotesCatalog` e pelo campo `LastSeenReleaseNotesVersion` das configurações (mostra de novo só quando existem notas mais recentes que a última vista).
-- Aviso ao vivo: ícone/banner no app consultam `GET /live-alert` (Worker) e mostram mensagem publicada pelo dashboard; dispensa é lembrada por `DismissedLiveAlertId` até o próximo aviso.
-- `MainWindow.xaml.cs` e `MainViewModel.cs` são divididos em `partial class` por área de responsabilidade (ex.: `MainWindow.Navigation.xaml.cs`, `MainWindow.Capture.xaml.cs`, `MainViewModel.Progress.cs`, `MainViewModel.Settings.cs`); ao editar uma área, localize o arquivo parcial correspondente em vez de assumir um único arquivo monolítico.
+- Aplicação WPF com WPF-UI/Fluent, Mica, tema claro/escuro/sistema, fallback para Windows 10 e localização declarativa em inglês, português do Brasil, espanhol e francês.
+- Configurações reúne conta, aparência/idioma, inicialização/bandeja, privacidade, atualizações, restauração de preferências e limpeza opt-in somente do cache descartável do Ralven.
+- Visão geral apresenta diagnóstico e métricas locais de CPU, GPU, memória, disco e rede. A coleta visual pausa fora do primeiro plano; o monitor FiveM iniciado explicitamente continua somente leitura na bandeja.
+- Sistema mostra hardware, saúde somente leitura de antivírus/firewall/atualizações automáticas e os dois controles HKCU allowlisted de jogos do Windows, com confirmação, journal e rollback.
+- Aplicativos instala, atualiza e desinstala somente pacotes identificados das origens `winget` e `msstore`; inventário e inicialização permanecem leituras que nunca executam `UninstallString`.
+- Jogos abre o hub FiveM/GTAV Legacy, com otimizador especializado, histórico, monitor local e acesso ao download oficial do ReShade. GTAV Enhanced continua bloqueado.
+- O Otimizador compartilha a trilha Preparar → Executar → Resultado entre `GeneralWindows` e `FiveMLegacy`; detalhes técnicos expõem risco, acesso, verificação e rollback. Cache/reparo continua opt-in e fora dos perfis padrão.
+- Ralven Pro e Ralven AI permanecem visíveis, localizados e bloqueados como recursos em desenvolvimento. Não há compra, ativação, cobrança ou chamada ao modelo enquanto as flags continuarem desativadas.
+- Notas da Versão aparecem após update quando existe versão ainda não vista. Avisos ao vivo vêm de `GET /live-alert` e podem ser dispensados até o próximo ID.
+- `MainWindow` e `MainViewModel` são `partial class` por responsabilidade; edite o arquivo parcial da área correspondente.
 
-### Motor de otimização e diagnóstico
+### Motor e diagnóstico
 
-- `ActionCatalog.CurrentVersion` mais recente registrado: **22**.
-- Diagnósticos cobrem FiveM/GTA, CPU, GPU, RAM, armazenamento/TRIM, cache, processos, rede, pagefile/commit, drivers, taxa de atualização, aceleração do mouse, energia, WHEA, sinais de throttling e outros dados obtidos por APIs nativas/best-effort. Eventos WHEA no log `System` usam o provedor `Microsoft-Windows-WHEA-Logger`; rede não classifica gargalo a partir de contadores cumulativos de uma única leitura; RAM não infere canais/XMP/EXPO a partir de `Win32_PhysicalMemory`; VRAM considera o melhor adaptador conhecido em sistemas híbridos; pagefile é apresentado como limite/folga de commit, não como tamanho do arquivo. Ver `docs/research.md`.
-- Existem diagnósticos somente leitura para gargalo provável, overlays/captura, logs do FiveM e orientação de medição pelas ferramentas oficiais do FiveM.
-- Relatório estruturado e relatório técnico sanitizado podem ser copiados/salvos explicitamente pelo usuário.
-- Falhas automáticas usam `BugCodeClassifier`; relatos manuais escolhem um motivo localizado mapeado para o mesmo `BugCode` allowlisted, permitindo agrupamento estável sem enviar classificação arbitrária.
-- Journal, snapshots e rollback preservam rastreabilidade das ações; ações administrativas exigem um receipt autoritativo protegido em HKLM/Registry64 antes de permitir rollback, e receipt ausente/corrompido falha fechado. A revalidação de planos compara integralmente os metadados de ações e usa a reconstrução canônica da requisição.
-- Ações XML de gráficos usam uma transação segura compartilhada; inspeção de processos e adaptadores de GPU têm primitivas de leitura separadas das mutações.
-- A recomendação considera hardware, pressão de recursos, uso pretendido e software de transmissão. A resposta consistente do ponteiro é exclusiva do Ultra, opt-in, preserva a velocidade e restaura os três valores anteriores sem sobrescrever escolha posterior.
-- Diagnóstico de criadores reconhece OBS, Streamlabs Desktop e TikTok LIVE Studio sem fechar processos nem inferir que uma live está ativa.
+- `ActionCatalog.CurrentVersion` atual: **22**.
+- Diagnósticos locais cobrem FiveM/GTA, hardware, armazenamento/TRIM, processos, rede, pagefile/commit, drivers, tela, energia, WHEA, aceleração do mouse e sinais de throttling. Dados indisponíveis permanecem indisponíveis; ver `docs/research.md`.
+- Planos são reconstituídos e comparados integralmente no runtime e no broker. Journal, snapshots e receipts administrativos em HKLM/Registry64 preservam rastreabilidade e fazem rollback elevado falhar fechado quando a autoridade está ausente ou corrompida.
+- A execução isola falhas por ação, respeita pré-requisitos e criticidade e nunca relata sucesso parcial como total. A restauração desfaz primeiro a fase administrativa e depois a local.
+- A recomendação considera hardware, pressão de recursos, uso pretendido e software de transmissão. A resposta consistente do ponteiro é exclusiva do Ultra, opt-in e reversível.
+- Relatórios estruturados e técnicos sanitizados só saem do aplicativo por ação explícita do usuário.
 
 ### Conta e autenticação
 
-- Autenticação usa **Firebase Authentication REST** para cadastro, login, verificação, recuperação, reautenticação, alteração e exclusão de conta.
-- O ID Token fica em memória; refresh token opcional é persistido protegido por DPAPI somente quando a escolha explícita de manter sessão permanece ativa em refresh/reautenticação. Logout só conclui após remover e verificar o estado persistido. O **Firebase UID** é o identificador interno permanente, nunca o e-mail.
-- Perfil complementar (nome, sobrenome e username único) é armazenado no Worker/D1, indexado pelo UID autenticado.
-- Worker valida ID Token Firebase por RS256/JWKS, incluindo `aud`, `iss`, expiração e `sub`.
-- Login com Google usa OAuth2 + PKCE com redirect loopback.
-- A sessão só é liberada após e-mail verificado, perfil existente e aceite da versão atual dos termos. O provedor Firebase determina se a conta possui senha; contas Google sem senha podem vinculá-la somente após reautenticação Google com o mesmo UID.
-- Exclusão de conta remove o perfil Worker/D1 antes da conta Firebase e tenta compensar a remoção do perfil se a exclusão Firebase falhar.
-- Segredos/configuração local de Google não são versionados; overlays `Config/appsettings.{Development,Production}.local.json` são git-ignorados.
-- Avatar é normalizado e armazenado **somente localmente**; não existe backend de avatar.
-- Card de conta mostra o plano (Free/Pro) lido de `GET /account/entitlements` (`CloudflareAccountEntitlementService`), autenticado pelo mesmo ID Token Firebase; nenhum dado de provedor de pagamento é exposto ao cliente.
+- Firebase Authentication REST sustenta cadastro, login, verificação, recuperação, reautenticação, Google OAuth2 + PKCE, TOTP e exclusão. ID tokens ficam em memória; refresh token opcional usa DPAPI; senha e tokens não são registrados.
+- O Worker valida RS256/JWKS, `aud`, `iss`, expiração e `sub`; o Firebase UID é a identidade permanente. Perfil complementar e username único ficam em D1.
+- Sessão completa exige e-mail verificado, perfil e termos vigentes. Mudanças sensíveis exigem reautenticação; a última forma de acesso não pode ser removida.
+- Códigos TOTP de recuperação são exibidos uma vez e armazenados somente como HMAC; seu uso remove o fator perdido e revoga sessões.
+- A conta pode gerar um código Discord de dez minutos e uso único. O Worker persiste somente o HMAC e o ID numérico vinculado; o bot oficial consulta cargos Free/Pro/Max derivados dos entitlements por rotas com segredo de serviço.
+- O card de conta lê Free/Pro de `GET /account/entitlements`, autenticado pelo mesmo ID token, sem expor dados do provedor de pagamento. Avatar permanece somente local.
 
-### Telemetria, bugs e backend
+### Telemetria, backend e operações
 
-- Infraestrutura registrada como ativa: `/telemetry`, `POST /bugs`, `GET /api/bugs` e `GET /live-alert`/`POST /admin/live-alert` (aviso ao vivo do dashboard para o app, painel dedicado no dashboard); relatos de bug são texto, e-mail opcional e trecho de log opcional. **Não há anexo/R2**.
-- Telemetria e crash reporting obedecem consentimento e allowlists; falhas de envio nunca devem bloquear ou alterar o resultado da otimização. Após confirmar o aviso vigente, somente diagnósticos essenciais allowlisted são transmitidos; telemetria detalhada e crash reports sanitizados compartilham a opção **Relatórios opcionais**, habilitada por padrão em novas instalações e desativável a qualquer momento.
-- Consentimento de privacidade na versão **9** (`PrivacyConsentPolicy`): além do `BugCode` fechado para classificação, ele separa o conjunto essencial da telemetria detalhada sem ampliar os campos coletados, registra inicialização saudável limitada por dia/versão e permite correlacionar opcionalmente uma operação por UUID efêmero. Todas as stacks passam por sanitização. As migrations `0008`–`0014` (incluindo alertas, 2FA e correlação v9) e o código consumidor estão preparados, mas ainda não foram implantados; devem ser aplicados juntos no próximo deploy controlado do Worker.
-- Telemetria anônima registra saúde/falhas localmente; Sentry só opera após consentimento e com **Relatórios opcionais** ativos. Falhas remotas nunca quebram a otimização.
-- A fila local de telemetria usa nomes monotônicos para preservar a ordem cronológica quando múltiplos eventos são gravados no mesmo intervalo de relógio.
-- Dashboard administrativo possui filtros, visão de telemetria e bugs, feeds compactos expansíveis e tratamento defensivo de falhas de rede/respostas inválidas. A sessão administrativa é opaca, revogável e válida por 30 dias; não persiste senha ou token no navegador.
-- O dashboard é um centro de comando: preserva avisos ao vivo com severidade e mostra sinais agregados de inicializações saudáveis, fluxos abandonados e resultados/duração do benchmark oficial, sem permitir contar pessoas ou reconstruir sessões.
-- Cookies administrativos cross-site usam `SameSite=None`; toda mutação `POST /admin/*` exige a origem exata do dashboard, e o dashboard publica CSP restritiva/anti-frame. O Worker não expõe mais a rota legada `workers.dev`; `api.vemryx.com` é a origem pública.
-- Cobrança recorrente (Asaas) no Worker/D1: `billing_checkout_intents`, `billing_webhook_events` (idempotente por `provider_request_id`), `billing_subscriptions` e `billing_payments` sustentam checkout hospedado, reconciliação e cancelamento; `account_entitlements` é o snapshot fail-closed lido por `GET /account/entitlements`. O preço vem do servidor (nunca do cliente); todo pagamento é revalidado contra a API canônica da Asaas antes de conceder Pro (nenhum campo do webhook é confiado isoladamente). A reconciliação manual é limitada a pagamentos recentes, TTL curto e uma auditoria histórica rotativa; webhooks continuam a fonte primária. Credenciais (`ASAAS_ACCESS_TOKEN`, `ASAAS_WEBHOOK_TOKEN`) e o domínio `api.vemryx.com` já estão configurados em produção; vendas permanecem desativadas até homologação (ver `docs/billing.md`, `docs/asaas-setup.md`).
-- Rota `POST /ai/message` (Ralven AI) exige entitlement Pro + `ralven_ai` validado no servidor, e-mail verificado, rate limit por Firebase UID, UUID idempotente e reserva de orçamento em D1 antes de chamar o provedor OpenAI; a credencial (`OPENAI_API_KEY`) só existe no Worker. A resposta é estruturada (texto + um perfil padrão opcional), limitada e sem ferramentas nem execução direta; o ledger não grava conteúdo da conversa. A migration `0011_ralven_ai_foundation.sql` é aditiva e ainda requer deploy controlado junto da ativação. Ver `docs/ralven-ai.md`.
-- Diagnósticos do updater usam catálogo fechado de códigos sem texto livre, distinguem Development/Production e seguem legíveis para clientes anteriores; o dashboard exibe o diagnóstico permitido, não stack traces ou paths.
+- `/telemetry`, `POST /bugs`, `GET /api/bugs` e o aviso ao vivo estão ativos. Bug reports são texto, e-mail/log opcionais e não usam anexo/R2.
+- Privacidade está na versão **9**: diagnósticos essenciais são allowlisted; dados detalhados e crash reports sanitizados compartilham a opção Relatórios opcionais. Falhas remotas nunca alteram a otimização.
+- As migrations `0008`–`0015` — alertas, 2FA, correlação v9 e vínculo Discord — e seus consumidores ainda exigem um próximo deploy controlado conjunto.
+- O dashboard privado usa sessão opaca revogável, CSRF/origem exata para mutações, CSP/anti-frame e consultas agregadas sem conteúdo interativo ou identificadores de conta/provedor.
+- Cobrança Asaas permanece fail-closed e desativada (`ASAAS_BILLING_ENABLED = "false"`). Preço vem do servidor e pagamentos só concedem entitlement após revalidação canônica; ver `docs/billing.md`.
+- `POST /ai/message` exige Pro + `ralven_ai`, e-mail verificado, rate limit, idempotência e orçamento D1. A rota e a UI continuam desativadas; o modelo não recebe ferramentas nem acesso ao Windows.
 
 ### Atualização e distribuição
 
-- Cadeia de atualização é independente/transacional, com staging, validações de origem/integridade, estado durável, health receipt, recuperação/rollback e proteção contra downgrade conforme documentação específica.
-- Launcher/Updater tratam locks, corridas e timeouts; a supervisão do lifecycle é serializada por instalação e todos os caminhos mutáveis de update recusam reparse points. Hashing/extração/verificação roda fora da UI com cancellation, comparação de hash em tempo constante e recuperação de journals órfãos.
-- Instalador Inno Setup 7 é self-contained `win-x64`, usa setup x64 e mantém tarefas como atalho e startup configuráveis no modo interativo. A experiência moderna acompanha o tema do sistema, mostra progresso real e detalhes técnicos opt-in, preserva documentos RTF e mensagens customizadas em inglês, português do Brasil, espanhol e francês.
-- Não existem aliases de executável, instalador ou atualização para gerações sem suporte. O importador inicial conserva apenas dados pessoais compatíveis, é unidirecional, allowlisted e protegido contra reparse points; ver `RALVEN_MIGRATION.md`.
-- Pipeline de endurecimento por ofuscação da release (`scripts/Invoke-Obfuscation.ps1`, config em `build/obfuscation/Ralven.Obfuscar.xml`): ofusca Core/Windows embutidos no bundle single-file do Launcher; `scripts/Test-HardenedRuntime.ps1`/`scripts/Test-NoUnobfuscatedAssemblies.ps1` validam determinismo e ausência de assemblies não ofuscados; gate fail-closed integrado a `scripts/Build-Portable.ps1`/`Build-Installer.ps1` e ao workflow de release. Ver `docs/release-hardening.md`.
-- A release pública é reconstruída a partir de fonte limpa no ambiente protegido `release-signing`; somente o runtime endurecido/ofuscado e validado avança à assinatura. Mapas de ofuscação são cifrados e guardados no caminho privado de R2, nunca anexados à release pública.
-- A CI escolhe escopo por alteração e cobre política do repositório, localização, build/testes .NET, Worker, dashboard, site, SBOM e build/smoke do instalador; o gate obrigatório aceita somente todos os jobs selecionados aprovados.
-- Dependabot direciona atualizações de versão para `dev/proxima-versao`; majors incompatíveis continuam retidas conforme a decisão aberta abaixo.
-- Site público, README, instalador, manifesto/checksums e release devem permanecer coerentes com a versão realmente publicada.
+- Launcher/Updater usam staging, origem, versão, tamanho, SHA-256, ativação atômica, health-check, recuperação e rollback; caminhos mutáveis recusam reparse points e hashing/extração não bloqueia a UI.
+- Instalador Inno Setup 7 é self-contained `win-x64`, acompanha o tema, mostra progresso real e preserva documentos/localização nos quatro idiomas.
+- Releases protegidas são reconstruídas de fonte limpa, ofuscam Core/Windows antes da assinatura e validam determinismo e ausência de assemblies não ofuscados; mapas cifrados ficam fora dos assets públicos.
+- A CI seleciona escopo e cobre política, localização, .NET, Worker, dashboard, site, SBOM e instalador. Dependabot direciona atualizações à `dev/proxima-versao`.
+- Site, README, instalador, manifestos/checksums e release devem permanecer coerentes com a versão realmente publicada.
 
 ## 5. Pendências e decisões abertas
 
@@ -155,7 +126,7 @@ Somente itens ainda relevantes devem permanecer aqui. Quando resolvidos e integr
 
 Estes números são **referência do último estado validado**, não substituem testes da branch atual.
 
-- **11/09/2026 — `v1.7.0`:** build Release sem avisos e **1.587 testes .NET** aprovados para o estado integrado, incluindo política/escopo, Worker, dashboard, site, SBOM e build/smoke do instalador nas CI aplicáveis.
+- **14/09/2026 — `dev/proxima-versao`:** build Release sem avisos; **1.599 testes .NET**, **296 testes do Worker/D1**, **63 do dashboard** e **3 do site** aprovados, além de format, segurança, lint, typecheck e audits sem falhas. Build portátil, instalador e smoke são validados separadamente antes da conclusão da integração.
 
 ## 7. Comandos essenciais
 

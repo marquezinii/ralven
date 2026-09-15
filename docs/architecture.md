@@ -149,6 +149,12 @@ consumidos atomicamente; seu uso remove o fator perdido e revoga refresh tokens,
 obrigando novo login. Criar, substituir ou apagar esses códigos exige token com
 autenticação recente.
 
+O vínculo opcional com o Discord parte da mesma UID autenticada. O aplicativo
+solicita um código de dez minutos e uso único; D1 guarda apenas seu HMAC e o ID
+numérico do Discord. O bot oficial resgata o código e consulta cargos derivados
+dos entitlements server-side por rotas protegidas por um segredo de serviço
+distinto. E-mail, nome do Discord e código em texto puro não são persistidos.
+
 `POST /account/profile` é a primeira rota de produto sobre esse verificador:
 como o Firebase só administra e-mail/senha/uid, essa rota guarda o que ele
 não guarda — nome, sobrenome e um nome de usuário único (case-insensitive) —

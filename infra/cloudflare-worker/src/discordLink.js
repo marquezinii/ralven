@@ -53,7 +53,7 @@ export async function createDiscordLinkCode(db, uid, secret, now = new Date()) {
   const createdAt = now.toISOString();
   const expiresAt = new Date(now.getTime() + CODE_TTL_MS).toISOString();
   await db.batch([
-    db.prepare('DELETE FROM discord_link_codes WHERE account_uid = ? AND used_at IS NULL').bind(uid),
+    db.prepare('DELETE FROM discord_link_codes WHERE account_uid = ?').bind(uid),
     db.prepare(`INSERT INTO discord_link_codes
       (code_hash, account_uid, expires_at, created_at) VALUES (?, ?, ?, ?)`)
       .bind(codeHash, uid, expiresAt, createdAt),
