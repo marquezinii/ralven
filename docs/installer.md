@@ -140,25 +140,30 @@ anterior. Logs detalhados ficam locais; eventos essenciais sanitizados chegam à
 
 ## Publicação no GitHub
 
-O workflow `.github/workflows/release.yml` é iniciado por uma tag estável exata
-`vX.Y.Z` ou por `workflow_dispatch` controlado. Antes de qualquer segredo, ele
+O workflow `.github/workflows/promote-release.yml` recebe o número de um PR
+`release/vX.Y.Z` para `main`, fixa seu SHA, aguarda os checks obrigatórios,
+promove exatamente esse commit, valida `origin/main`, cria a tag e chama
+diretamente `.github/workflows/release.yml`. O workflow de release também pode
+ser iniciado por uma tag estável exata `vX.Y.Z` ou por `workflow_dispatch`
+controlado. Antes de qualquer segredo, ele
 confirma que a tag identifica o `origin/main` atual e compila/testa somente o
 código limpo, sem produzir candidato publicável. Um job separado, protegido
 pelo ambiente `release-signing`, recompila, ofusca e valida diretamente o
 runtime protegido antes de assinar os manifestos de update e broker com chaves
 online distintas. Mappings de diagnóstico saem desse ambiente apenas como bundle
 AES-256-GCM autenticado, preservado no R2 e nunca anexado à release pública. A
-publicação exige também a aprovação manual do ambiente GitHub `production`; o
-`workflow_dispatch` permite validar uma tag sem publicar ou retomar de forma
-controlada uma publicação interrompida.
+aprovação humana ocorre uma vez, em `release-signing`; o ambiente `production`
+continua isolando as credenciais de deploy e só é alcançado depois do job
+protegido. O modo manual `plan` valida sem acessar secrets, assinar ou publicar;
+`build` gera o candidato assinado sem distribuição e `publish` conclui a
+publicação.
 
 Antes de criar a release, o workflow repete build, testes, instalação e
 desinstalação; gera checksums; assina e verifica os manifestos do runtime e do
 broker; aplica o schema D1; implanta e verifica o Worker, o dashboard e o feed;
 gera as notas a partir do `CHANGELOG.md`; e produz uma atestação de proveniência
-do instalador. Quando a GitHub Release é criada, um dispatch explícito aciona a
-notificação estável no Discord somente após os artefatos versionados já estarem
-no R2. Publicações manuais de pre-release usam o canal beta. O binário permanece sem assinatura de código até
+do instalador. O bot oficial observa as releases e publica o anúncio com sua
+própria identidade; o workflow não usa mais um webhook separado. O binário permanece sem assinatura de código até
 existir um certificado Authenticode. SHA-256 e atestação aumentam a
 transparência, mas não substituem reputação ou uma assinatura pública.
 
@@ -181,16 +186,15 @@ Fontes oficiais usadas no desenho:
 
 ## Procedimento de release
 
-1. Atualize `Directory.Build.props` e `CHANGELOG.md` com uma versão SemVer.
-2. Execute localmente `Verify-Safety.ps1`, os testes,
-   `Build-Installer.ps1 -Harden`, `Test-HardenedRuntime.ps1` e
-   `Test-Installer.ps1`.
-3. Faça commit, envie `main`, crie a tag exata `vX.Y.Z` e envie a tag.
-4. Aprove os ambientes `release-signing` e `production` após conferir o
-   candidato e a origem validada pelo workflow.
-5. Verifique a GitHub Release de notas e, em `vemryx.com/Ralven/`, o instalador,
-   runtime ZIP, checksums e os dois manifestos assinados; confira também o
-   dashboard publicado antes de divulgar.
+1. Crie `release/vX.Y.Z` do SHA escolhido de `dev/proxima-versao`; atualize
+   `Directory.Build.props`, `CHANGELOG.md` e os demais contratos de versão.
+2. Execute as validações locais aplicáveis e abra o PR dessa branch para
+   `main`; não continue alterando o candidato depois do dispatch.
+3. Inicie `promote-release.yml` com o número do PR e aprove uma vez o ambiente
+   `release-signing` quando a origem validada for apresentada.
+4. A automação aguarda o gate, promove, cria a tag, compila, assina, publica,
+   verifica os feeds e sincroniza `dev/proxima-versao`. Em falha, diagnostique
+   a etapa registrada; não recrie versão nem contorne validações.
 
 ### Anúncios no Discord
 
@@ -198,9 +202,9 @@ O bot oficial consulta as releases e o roadmap público e publica os avisos com
 a própria identidade no Discord. Não use webhooks de release: eles publicariam
 como uma integração separada e duplicariam as mensagens do bot.
 
-O push da tag prepara automaticamente a release, mas os ambientes protegidos
-mantêm as duas confirmações humanas nos pontos que acessam chaves ou alteram
-produção. A página pública de download é `https://vemryx.com/Ralven/`, gratuita e sem login para
+O push manual da tag ainda prepara automaticamente a release como fallback,
+mas o fluxo normal usa a promoção coordenada e uma única confirmação humana
+antes do acesso às chaves. A página pública de download é `https://vemryx.com/Ralven/`, gratuita e sem login para
 visitantes. O botão da página usa `Ralven-Setup-latest-win-x64.exe`; a mesma
 release também publica o instalador versionado e o alias
 `Ralven-Setup-latest-win-x64.exe` no bucket privado da Vemryx.

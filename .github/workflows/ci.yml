@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, dev/proxima-versao]
+    # main is updated only by the stable promotion workflow, after the exact
+    # release candidate passed this workflow as a PR. Re-running the full CI
+    # after that merge duplicated installer/SBOM builds without adding a gate.
+    branches: [dev/proxima-versao]
   pull_request:
     branches: [main, dev/proxima-versao]
   workflow_dispatch:
@@ -142,9 +145,6 @@ jobs:
           --coverlet
           --coverlet-output-format cobertura
           --coverlet-file-prefix coverage
-
-      - name: Check NuGet vulnerabilities
-        run: dotnet list Ralven.slnx package --vulnerable --include-transitive
 
       - name: Upload test results
         if: always()

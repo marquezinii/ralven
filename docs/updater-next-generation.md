@@ -115,8 +115,11 @@ chave pública atual.
 As respectivas chaves públicas ficam incorporadas em
 `update-manifest-public-key.pem` e `broker-integrity-public-key.pem`; cada
 segredo deve corresponder apenas ao seu arquivo público. O ambiente
-`production`, com revisores obrigatórios, guarda `CLOUDFLARE_API_TOKEN` e
-`CLOUDFLARE_ACCOUNT_ID` e é o único que pode publicar a release e o feed.
+`production` guarda `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID` e é o
+único que pode publicar a release e o feed. A aprovação humana obrigatória
+ocorre uma vez em `release-signing`; produção depende dessa assinatura aprovada
+e mantém isolamento próprio de secrets sem uma segunda confirmação equivalente
+do mesmo operador.
 
 Os dois arquivos públicos têm escopo separado e o par ECDSA P-256 do broker é
 distinto do par de update. Em rotações futuras, gere o novo par exclusivamente

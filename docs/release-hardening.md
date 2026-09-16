@@ -65,9 +65,13 @@ manifest and the signed update manifest — therefore covers the hardened
 binaries. `scripts/Build-Installer.ps1 -Harden` forwards the switch.
 
 The public release workflow (`.github/workflows/release.yml`) first builds and
-tests clean source, then rebuilds with `-Harden` inside the protected
-`release-signing` environment. Only that protected output advances to signing
-and publication; there is no unsigned clean candidate artifact to select by
+tests clean source, then rebuilds the runtime tree with `-Harden` inside the
+protected `release-signing` environment. That first protected pass deliberately
+uses `-SkipArchives`: the broker manifest is signed next, and only then does
+`Finalize-BrokerIntegrity.ps1` create the two final ZIPs and compile the
+installer. This avoids producing provisional public packages that would be
+invalidated immediately by the signature. Only that protected output advances
+to publication; there is no unsigned clean candidate artifact to select by
 mistake. Development builds, the dev shortcut and ordinary CI test builds do
 not use `-Harden`, so day-to-day debugging is unaffected.
 
@@ -143,7 +147,8 @@ steps above worked — each one proves it on the actual output bytes:
    renamed. Any failure stops the build before hashing or signing.
 2. **Fail-closed artifact scan** (`scripts/Test-NoUnobfuscatedAssemblies.ps1`):
    run automatically by `Build-Portable.ps1 -Harden` (against the assembled
-   runtime tree and both ZIPs) and by `Build-Installer.ps1 -Harden` (against
+   runtime tree and, unless `-SkipArchives` is selected, both ZIPs) and by
+   `Build-Installer.ps1 -Harden` (against
    the compiled installer). It byte-scans every public artifact — the loose
    App/Broker `Core.dll`/`Windows.dll`, the `Launcher.exe` bundle, both ZIPs'
    contents and (when 7-Zip can parse the installer's format) the installer's
