@@ -1,0 +1,170 @@
+name: Promote and publish stable release
+run-name: Promote release PR #${{ inputs.release_pr }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_pr:
+        description: Open release PR number targeting main
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  attestations: write
+  checks: read
+  contents: write
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: ralven-stable-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Validate candidate, merge and tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    outputs:
+      candidate_sha: ${{ steps.candidate.outputs.candidate_sha }}
+      release_tag: ${{ steps.candidate.outputs.release_tag }}
+      release_version: ${{ steps.candidate.outputs.release_version }}
+      trusted_commit: ${{ steps.promote.outputs.trusted_commit }}
+
+    steps:
+      - name: Checkout release automation
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Pin and validate the release candidate
+        id: candidate
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR: ${{ inputs.release_pr }}
+        run: |
+          if ($env:RELEASE_PR -notmatch '^[1-9][0-9]*$') {
+            throw 'release_pr must be a positive Pull Request number.'
+          }
+
+          $pr = gh api "repos/$env:GITHUB_REPOSITORY/pulls/$env:RELEASE_PR" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not load the release Pull Request.' }
+          if ($pr.state -ne 'open' -or $pr.draft) { throw 'The release Pull Request must be open and ready for review.' }
+          if ($pr.base.ref -ne 'main') { throw 'The release Pull Request must target main.' }
+          if ($pr.head.repo.full_name -ne $env:GITHUB_REPOSITORY) { throw 'The release candidate must come from this repository.' }
+          if ($pr.head.ref -notmatch '^release/v[0-9]+\.[0-9]+\.[0-9]+$') {
+            throw 'The release Pull Request head must be release/vX.Y.Z.'
+          }
+
+          $candidate = [string]$pr.head.sha
+          git fetch --no-tags origin "+refs/heads/$($pr.head.ref):refs/remotes/origin/$($pr.head.ref)"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch the pinned release candidate.' }
+          if ((git rev-parse "refs/remotes/origin/$($pr.head.ref)").Trim() -ne $candidate) {
+            throw 'The fetched release branch does not match the Pull Request candidate SHA.'
+          }
+          git checkout --detach $candidate
+          if ($LASTEXITCODE -ne 0) { throw 'Could not check out the pinned release candidate.' }
+
+          [xml]$props = Get-Content -LiteralPath ./Directory.Build.props -Raw
+          $version = [string]$props.Project.PropertyGroup.Version
+          $tag = "v$version"
+          if ($pr.head.ref -ne "release/$tag") {
+            throw "Release branch '$($pr.head.ref)' does not match project version '$version'."
+          }
+          ./scripts/Test-PublicVersionProgression.ps1 -Version $version
+
+          "candidate_sha=$candidate" >> $env:GITHUB_OUTPUT
+          "release_version=$version" >> $env:GITHUB_OUTPUT
+          "release_tag=$tag" >> $env:GITHUB_OUTPUT
+          "### Candidato fixado`n`n- PR: #$env:RELEASE_PR`n- Tag: $tag`n- SHA: $candidate" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Wait for every required check
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR: ${{ inputs.release_pr }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+        run: |
+          gh pr checks $env:RELEASE_PR --repo $env:GITHUB_REPOSITORY --required --watch --interval 10
+          if ($LASTEXITCODE -ne 0) { throw 'A required release check failed or was cancelled.' }
+
+          $successfulGateCount = gh api "repos/$env:GITHUB_REPOSITORY/commits/$env:CANDIDATE_SHA/check-runs" `
+            --jq '[.check_runs[] | select(.name == "Required CI gate" and .status == "completed" and .conclusion == "success")] | length'
+          if ($LASTEXITCODE -ne 0 -or [int]$successfulGateCount -lt 1) {
+            throw 'The exact candidate SHA does not have a successful Required CI gate.'
+          }
+
+      - name: Promote exact candidate to main and create stable tag
+        id: promote
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PR: ${{ inputs.release_pr }}
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.candidate_sha }}
+          RELEASE_TAG: ${{ steps.candidate.outputs.release_tag }}
+          RELEASE_VERSION: ${{ steps.candidate.outputs.release_version }}
+        run: |
+          gh pr merge $env:RELEASE_PR --repo $env:GITHUB_REPOSITORY --merge --delete-branch `
+            --match-head-commit $env:CANDIDATE_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'Promoting the pinned release candidate failed.' }
+
+          git fetch --no-tags origin '+refs/heads/main:refs/remotes/origin/main'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch promoted main.' }
+          $pr = gh api "repos/$env:GITHUB_REPOSITORY/pulls/$env:RELEASE_PR" | ConvertFrom-Json
+          $trustedCommit = [string]$pr.merge_commit_sha
+          $remoteMain = (git rev-parse refs/remotes/origin/main).Trim()
+          if ($trustedCommit -notmatch '^[0-9a-f]{40}$' -or $remoteMain -ne $trustedCommit) {
+            throw 'The merged Pull Request does not identify current origin/main.'
+          }
+
+          git checkout --detach $trustedCommit
+          ./scripts/Test-ReleaseTagTarget.ps1 -Version $env:RELEASE_VERSION
+
+          git tag --annotate $env:RELEASE_TAG --message "Ralven $env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Creating the stable tag failed.' }
+          git push origin "refs/tags/$env:RELEASE_TAG"
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the stable tag failed.' }
+
+          "trusted_commit=$trustedCommit" >> $env:GITHUB_OUTPUT
+          "### Promoção concluída`n`n- Tag: $env:RELEASE_TAG`n- main: $trustedCommit" >> $env:GITHUB_STEP_SUMMARY
+
+  release:
+    name: Build, sign and publish
+    needs: promote
+    uses: ./.github/workflows/release.yml
+    with:
+      release_tag: ${{ needs.promote.outputs.release_tag }}
+      mode: publish
+    secrets: inherit
+
+  sync:
+    name: Synchronize integration branch
+    needs: [promote, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Merge published main into dev/proxima-versao
+        shell: pwsh
+        run: |
+          git fetch --no-tags origin `
+            '+refs/heads/main:refs/remotes/origin/main' `
+            '+refs/heads/dev/proxima-versao:refs/remotes/origin/dev/proxima-versao'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch branches for post-release synchronization.' }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B release-sync refs/remotes/origin/dev/proxima-versao
+          git merge --no-edit refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) { throw 'Post-release synchronization has a semantic conflict and requires review.' }
+          git push origin HEAD:refs/heads/dev/proxima-versao
+          if ($LASTEXITCODE -ne 0) { throw 'Publishing the synchronized integration branch failed.' }
+
+          $published = (git rev-parse refs/remotes/origin/main).Trim()
+          "### Release concluída`n`n- Tag: ${{ needs.promote.outputs.release_tag }}`n- Publicada: $published`n- dev/proxima-versao sincronizada." >> $env:GITHUB_STEP_SUMMARY

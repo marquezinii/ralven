@@ -73,6 +73,19 @@ publicação do feed falhar depois de a GitHub Release de notas já existir, uma
 reexecução republica os mesmos objetos versionados auditados antes de tornar os
 aliases estáveis visíveis.
 
+A promoção normal parte de um PR `release/vX.Y.Z` para `main`. O workflow fixa
+o SHA, aguarda os checks obrigatórios, promove com proteção contra troca do
+candidato, cria a tag, chama diretamente o build protegido e sincroniza a branch
+de integração depois da verificação pública. O agente que preparou a versão pode
+encerrar sua participação assim que essa execução for aceita: o GitHub registra
+o resultado e não depende de consultas periódicas de uma sessão de IA.
+
+O `workflow_dispatch` de release possui modos explícitos. `plan` executa apenas
+a auditoria sem secrets, assinatura ou publicação; `build` produz um candidato
+assinado sem distribuí-lo; `publish` conclui os efeitos externos. As versões
+estáveis compartilham uma trava de publicação, pois todas escrevem os mesmos
+aliases e feeds.
+
 Para limitar armazenamento sem arriscar a versão pública, o workflow conserva
 somente as 7 pastas de release SemVer mais recentes no R2 depois que a nova
 publicação termina. Os aliases e manifestos em `stable/` são preservados. Não há

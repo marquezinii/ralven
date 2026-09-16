@@ -155,6 +155,8 @@ Use, quando aplicável, os prefixos:
 - `docs/<slug>` para documentação;
 - `chore/<slug>` para manutenção;
 - `task/<slug>` quando nenhuma categoria anterior representar bem a tarefa.
+- `release/vX.Y.Z` exclusivamente para o candidato imutável de uma publicação
+  oficial já autorizada.
 
 Exemplos: `feat/account-security`, `fix/updater-timeout`,
 `refactor/telemetry-pipeline`. Gere automaticamente um slug curto e descritivo;
@@ -441,30 +443,45 @@ publicação.
 
 Ao ser disparada, a IA deve:
 
-1. revisar completamente o projeto, o histórico integrado e a documentação
-   relevante, validando build e testes e corrigindo falhas antes de prosseguir;
+1. revisar o conjunto integrado desde a última GitHub Release estável, os
+   contratos de distribuição e a documentação diretamente afetada, sem reabrir
+   uma auditoria geral não relacionada já coberta pela integração e pela CI;
 2. confirmar que `PROJECT_STATE.md` representa o estado integrado atual e continua
    compacto; corrigir inconsistências de estado antes de gerar notas públicas;
 3. calcular a próxima versão com [Semantic Versioning](https://semver.org/lang/pt-BR/),
    usando todas as mudanças efetivamente integradas desde a última **GitHub
    Release estável publicada**;
 4. atualizar todos os arquivos de versão, `CHANGELOG.md`, notas de release,
-   instalador, site e demais artefatos de distribuição, sem divergências;
-5. promover `dev/proxima-versao` para `main` pelo Pull Request exigido pela
-   proteção, aguardando os checks obrigatórios e confirmando que o commit da
-   release já é exatamente `origin/main`; salvo se uma comparação explícita de
-   histórico e conteúdo provar que ambas já são idênticas;
-6. somente após o passo 5, executar
-   `scripts/Test-ReleaseTagTarget.ps1 -Version <versão>` no commit limpo que
-   será marcado; criar e publicar a tag em comando separado, verificando o
-   resultado do comando nativo antes de qualquer passo seguinte. Nunca crie uma
-   tag em paralelo, em sequência não verificada com o push/merge de `main`, ou
-   antes de `HEAD` coincidir com `origin/main`. Em seguida, publicar os
-   artefatos oficiais e a GitHub Release, cujo corpo segue obrigatoriamente o
-   [Padrão das GitHub Releases](#padrão-das-github-releases-release-notes)
-   definido abaixo;
-7. validar o atualizador de ponta a ponta e sincronizar `dev/proxima-versao`
-   com a `main` publicada para iniciar o próximo ciclo.
+   instalador, site e demais artefatos de distribuição em uma branch nova e
+   exclusiva `release/vX.Y.Z`, criada do SHA atual de `dev/proxima-versao`;
+5. abrir o Pull Request dessa branch diretamente para `main`, conferir o SHA
+   candidato e iniciar `promote-release.yml` informando o número do PR;
+6. depois que o GitHub aceitar a execução, informar versão, SHA, PR e URL/ID da
+   execução e encerrar a participação, sem consultas repetidas de status. A
+   automação fixa o candidato, espera todos os checks obrigatórios, promove o
+   SHA exato, valida `origin/main`, cria e publica a tag em comandos separados,
+   chama diretamente a distribuição protegida, verifica feeds/artefatos e
+   sincroniza `dev/proxima-versao`;
+7. só retomar atuação quando a automação notificar falha ou o usuário solicitar
+   diagnóstico. Início, GitHub Release criada e publicação verificada são
+   estados distintos; nunca declarar conclusão apenas porque o workflow iniciou.
+
+O workflow `promote-release.yml` é o coordenador determinístico da publicação.
+Ele usa `--match-head-commit`, exige `Required CI gate` verde para o SHA fixado,
+serializa promoções e chama `release.yml` por `workflow_call`, pois tags criadas
+com `GITHUB_TOKEN` não disparam automaticamente outro workflow. A autorização
+humana ocorre uma vez no ambiente protegido `release-signing`; o job de
+`production` continua isolando seus próprios secrets, mas só inicia depois da
+assinatura aprovada e validada.
+
+O modo manual `plan` de `release.yml` é a única simulação sem assinatura nem
+efeitos externos. `build` acessa o ambiente de assinatura e produz candidato
+assinado sem publicar; `publish` distribui. Nunca apresente `build` como dry-run.
+
+Durante a primeira adoção, se `promote-release.yml` ainda não existir em `main`
+e portanto não puder receber `workflow_dispatch`, conclua essa única promoção
+pelo procedimento seguro anterior. Depois que a automação estiver na branch
+padrão, não substitua seu encadeamento por polling manual do agente.
 
 Um push autorizado não permite ocultar falhas: build, testes, lint, typecheck,
 empacotamento e validação de versão devem passar, ou o bloqueio deve ser
@@ -493,7 +510,8 @@ nota de release ou classificar a versão, a IA que publica deve:
 
 1. determinar o intervalo exato: da última **GitHub Release estável publicada**
    (confirmada por `gh release view`/API; não apenas por `git describe`) até o
-   `HEAD` atual de `dev/proxima-versao`;
+   SHA fixado da branch `release/vX.Y.Z`, criada diretamente do estado escolhido
+   de `dev/proxima-versao`;
 2. listar **todos** os commits desse intervalo (`git log <última-tag>..HEAD
    --oneline` em `dev/proxima-versao`) e, quando existirem, os Pull Requests
    correspondentes — não confiar apenas na memória da sessão ou em um
@@ -775,10 +793,10 @@ Integração solicitada
 → dev pronta
 
 Publicação oficial solicitada
-→ validações e SemVer
-→ changelog e artefatos
-→ merge dev/proxima-versao → main
-→ tag, push e release
-→ validação do updater
-→ sincronização main/dev
+→ revisão focada, SemVer, changelog e artefatos na release/vX.Y.Z
+→ PR release/vX.Y.Z → main
+→ dispatch de promote-release.yml e encerramento da participação da IA
+→ automação espera gates e promove o SHA exato
+→ tag + build protegido + assinatura + publicação + validação do updater
+→ automação sincroniza main/dev e registra o resultado
 ```
