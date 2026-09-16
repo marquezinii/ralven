@@ -23,6 +23,16 @@ if (-not [Uri]::TryCreate($config.telemetryEndpoint, [UriKind]::Absolute, [ref]$
     throw 'Production telemetry endpoint is not allowlisted.'
 }
 
+$accountProfileEndpoint = $null
+if (-not [Uri]::TryCreate($config.accountProfileEndpoint, [UriKind]::Absolute, [ref]$accountProfileEndpoint) -or
+    $accountProfileEndpoint.AbsoluteUri -ne
+        'https://api.vemryx.com/account/profile') {
+    throw 'Production account profile endpoint is not allowlisted.'
+}
+if ([string]::IsNullOrWhiteSpace($config.firebaseApiKey)) {
+    throw 'Production Firebase API key is missing.'
+}
+
 $sentryDsn = $null
 if (-not [Uri]::TryCreate($config.sentryDsn, [UriKind]::Absolute, [ref]$sentryDsn) -or
     $sentryDsn.Scheme -ne [Uri]::UriSchemeHttps -or
@@ -76,6 +86,120 @@ if (-not $schema.has_event_id -or -not $schema.has_bug_code) {
 $dashboardResponse = Invoke-WebRequest -Uri $DashboardUrl -Method Get -SkipHttpErrorCheck
 if ($dashboardResponse.StatusCode -ne 200) {
     throw "Dashboard health check returned HTTP $($dashboardResponse.StatusCode)."
+}
+
+$firebaseIdToken = $null
+$accountDeletionAccepted = $false
+$firebaseSignupEndpoint =
+    "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$([Uri]::EscapeDataString($config.firebaseApiKey))"
+$firebaseLoginEndpoint =
+    "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$([Uri]::EscapeDataString($config.firebaseApiKey))"
+$firebaseRefreshEndpoint =
+    "https://securetoken.googleapis.com/v1/token?key=$([Uri]::EscapeDataString($config.firebaseApiKey))"
+$firebaseDeleteEndpoint =
+    "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=$([Uri]::EscapeDataString($config.firebaseApiKey))"
+$accountDeleteEndpoint = "https://api.vemryx.com/account"
+$syntheticEmail = "ralven-smoke-$([Guid]::NewGuid().ToString('N'))@example.invalid"
+$syntheticPassword = [Convert]::ToBase64String(
+    [Security.Cryptography.RandomNumberGenerator]::GetBytes(32)) + 'Aa1!'
+
+try {
+    $signupPayload = @{
+        email = $syntheticEmail
+        password = $syntheticPassword
+        returnSecureToken = $true
+    } | ConvertTo-Json -Compress
+    $signupResponse = Invoke-WebRequest -Uri $firebaseSignupEndpoint -Method Post `
+        -ContentType 'application/json' -Body $signupPayload -SkipHttpErrorCheck
+    if ($signupResponse.StatusCode -ne 200) {
+        throw "Firebase account smoke signup returned HTTP $($signupResponse.StatusCode)."
+    }
+    $signup = $signupResponse.Content | ConvertFrom-Json
+    $firebaseIdToken = $signup.idToken
+    $firebaseRefreshToken = $signup.refreshToken
+    if ([string]::IsNullOrWhiteSpace($firebaseIdToken) -or
+        [string]::IsNullOrWhiteSpace($firebaseRefreshToken) -or
+        [string]::IsNullOrWhiteSpace($signup.localId)) {
+        throw 'Firebase account smoke signup returned an incomplete session.'
+    }
+
+    $profileResponse = Invoke-WebRequest -Uri $accountProfileEndpoint -Method Get `
+        -Headers @{ Authorization = "Bearer $firebaseIdToken" } -SkipHttpErrorCheck
+    $profileBody = $profileResponse.Content | ConvertFrom-Json
+    if ($profileResponse.StatusCode -ne 404 -or $profileBody.error -ne 'profile-not-found') {
+        throw "Authenticated account profile smoke returned HTTP $($profileResponse.StatusCode)."
+    }
+
+    $unverifiedProfileResponse = Invoke-WebRequest -Uri $accountProfileEndpoint -Method Post `
+        -Headers @{ Authorization = "Bearer $firebaseIdToken" } `
+        -ContentType 'application/json' -Body '{}' -SkipHttpErrorCheck
+    $unverifiedProfileBody = $unverifiedProfileResponse.Content | ConvertFrom-Json
+    if ($unverifiedProfileResponse.StatusCode -ne 403 -or
+        $unverifiedProfileBody.error -ne 'email-verification-required') {
+        throw "Unverified account profile smoke returned HTTP $($unverifiedProfileResponse.StatusCode)."
+    }
+
+    $loginPayload = @{
+        email = $syntheticEmail
+        password = $syntheticPassword
+        returnSecureToken = $true
+    } | ConvertTo-Json -Compress
+    $loginResponse = Invoke-WebRequest -Uri $firebaseLoginEndpoint -Method Post `
+        -ContentType 'application/json' -Body $loginPayload -SkipHttpErrorCheck
+    if ($loginResponse.StatusCode -ne 200) {
+        throw "Firebase account smoke login returned HTTP $($loginResponse.StatusCode)."
+    }
+    $login = $loginResponse.Content | ConvertFrom-Json
+    $firebaseIdToken = $login.idToken
+    $firebaseRefreshToken = $login.refreshToken
+    if ([string]::IsNullOrWhiteSpace($firebaseIdToken) -or
+        [string]::IsNullOrWhiteSpace($firebaseRefreshToken)) {
+        throw 'Firebase account smoke login returned an incomplete session.'
+    }
+
+    $refreshPayload = 'grant_type=refresh_token&refresh_token=' +
+        [Uri]::EscapeDataString($firebaseRefreshToken)
+    $refreshResponse = Invoke-WebRequest -Uri $firebaseRefreshEndpoint -Method Post `
+        -ContentType 'application/x-www-form-urlencoded' -Body $refreshPayload -SkipHttpErrorCheck
+    if ($refreshResponse.StatusCode -ne 200) {
+        throw "Firebase account smoke refresh returned HTTP $($refreshResponse.StatusCode)."
+    }
+    $refresh = $refreshResponse.Content | ConvertFrom-Json
+    $firebaseIdToken = $refresh.id_token
+    if ([string]::IsNullOrWhiteSpace($firebaseIdToken)) {
+        throw 'Firebase account smoke refresh returned an incomplete session.'
+    }
+
+    $deleteResponse = Invoke-WebRequest -Uri $accountDeleteEndpoint -Method Delete `
+        -Headers @{ Authorization = "Bearer $firebaseIdToken" } -SkipHttpErrorCheck
+    if ($deleteResponse.StatusCode -notin 202, 204) {
+        throw "Coordinated account deletion smoke returned HTTP $($deleteResponse.StatusCode)."
+    }
+    $accountDeletionAccepted = $true
+
+    $revokedProfileResponse = Invoke-WebRequest -Uri $accountProfileEndpoint -Method Get `
+        -Headers @{ Authorization = "Bearer $firebaseIdToken" } -SkipHttpErrorCheck
+    if ($revokedProfileResponse.StatusCode -ne 401) {
+        throw "Deleted account token remained usable: HTTP $($revokedProfileResponse.StatusCode)."
+    }
+
+    if ($deleteResponse.StatusCode -eq 204) {
+        $deletedLoginResponse = Invoke-WebRequest -Uri $firebaseLoginEndpoint -Method Post `
+            -ContentType 'application/json' -Body $loginPayload -SkipHttpErrorCheck
+        if ($deletedLoginResponse.StatusCode -ne 400) {
+            throw "Deleted Firebase account still accepted login: HTTP $($deletedLoginResponse.StatusCode)."
+        }
+    }
+}
+finally {
+    if (-not $accountDeletionAccepted -and -not [string]::IsNullOrWhiteSpace($firebaseIdToken)) {
+        $deletePayload = @{ idToken = $firebaseIdToken } | ConvertTo-Json -Compress
+        $deleteResponse = Invoke-WebRequest -Uri $firebaseDeleteEndpoint -Method Post `
+            -ContentType 'application/json' -Body $deletePayload -SkipHttpErrorCheck
+        if ($deleteResponse.StatusCode -ne 200) {
+            throw "Synthetic Firebase account cleanup returned HTTP $($deleteResponse.StatusCode)."
+        }
+    }
 }
 
 $eventId = [Guid]::NewGuid().ToString()
@@ -169,5 +293,5 @@ if ($sentryReceipt.id -ne $sentryEventId) {
     throw 'Sentry did not acknowledge the synthetic crash event ID.'
 }
 
-Write-Host "Production diagnostics smoke: OK (telemetry $eventId cleaned; Sentry $sentryEventId accepted)." `
+Write-Host "Production diagnostics smoke: OK (account cleaned; telemetry $eventId cleaned; Sentry $sentryEventId accepted)." `
     -ForegroundColor Green

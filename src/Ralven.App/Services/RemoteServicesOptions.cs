@@ -51,6 +51,14 @@ public sealed record RemoteServicesOptions
     public string? FirebaseApiKey { get; init; }
 
     /// <summary>
+    /// Enables TOTP enrollment only after Firebase Authentication with
+    /// Identity Platform and the matching Worker recovery secrets are live.
+    /// The default is fail-closed so an incomplete backend is never offered
+    /// as a working security control.
+    /// </summary>
+    public bool FirebaseTotpEnabled { get; init; }
+
+    /// <summary>
     /// OAuth 2.0 client id of the Google Cloud "Desktop app" credential used
     /// by <see cref="GoogleOAuthClient"/>. Absent means the account window
     /// simply does not offer "Continuar com o Google" — the button is hidden
@@ -158,6 +166,7 @@ public static class RemoteServicesOptionsLoader
                 AccountProfileEndpoint = overlay.AccountProfileEndpoint ?? options.AccountProfileEndpoint,
                 LiveAlertEndpoint = overlay.LiveAlertEndpoint ?? options.LiveAlertEndpoint,
                 FirebaseApiKey = overlay.FirebaseApiKey ?? options.FirebaseApiKey,
+                FirebaseTotpEnabled = overlay.FirebaseTotpEnabled ?? options.FirebaseTotpEnabled,
                 GoogleOAuthClientId = overlay.GoogleOAuthClientId ?? options.GoogleOAuthClientId,
                 GoogleOAuthClientSecret = overlay.GoogleOAuthClientSecret ?? options.GoogleOAuthClientSecret,
             };
@@ -177,6 +186,7 @@ public static class RemoteServicesOptionsLoader
         public string? AccountProfileEndpoint { get; init; }
         public string? LiveAlertEndpoint { get; init; }
         public string? FirebaseApiKey { get; init; }
+        public bool? FirebaseTotpEnabled { get; init; }
         public string? GoogleOAuthClientId { get; init; }
         public string? GoogleOAuthClientSecret { get; init; }
     }
@@ -223,6 +233,42 @@ public static class TelemetryEndpointPolicy
             && !string.Equals(candidate.Host, ProductionHost, StringComparison.OrdinalIgnoreCase))
         {
             error = "O endpoint de telemetria de produção não usa o host autorizado.";
+            return false;
+        }
+
+        endpoint = candidate;
+        return true;
+    }
+}
+
+/// <summary>
+/// Production allowlist for the Worker route that receives Firebase ID
+/// tokens. Development may use another HTTPS origin, but a mutable local
+/// production overlay must never redirect account credentials off-domain.
+/// </summary>
+public static class AccountProfileEndpointPolicy
+{
+    public const string ProfilePath = "/account/profile";
+
+    public static bool TryCreate(
+        string? configuredValue,
+        AppRuntimeEnvironment runtimeEnvironment,
+        out Uri endpoint)
+    {
+        endpoint = null!;
+        if (string.IsNullOrWhiteSpace(configuredValue)
+            || !Uri.TryCreate(configuredValue, UriKind.Absolute, out var candidate)
+            || candidate.Scheme != Uri.UriSchemeHttps
+            || !string.IsNullOrEmpty(candidate.UserInfo)
+            || !string.IsNullOrEmpty(candidate.Query)
+            || !string.IsNullOrEmpty(candidate.Fragment)
+            || !string.Equals(candidate.AbsolutePath, ProfilePath, StringComparison.Ordinal)
+            || runtimeEnvironment == AppRuntimeEnvironment.Production
+                && !string.Equals(
+                    candidate.Host,
+                    TelemetryEndpointPolicy.ProductionHost,
+                    StringComparison.OrdinalIgnoreCase))
+        {
             return false;
         }
 

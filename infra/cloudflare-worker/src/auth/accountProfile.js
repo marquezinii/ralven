@@ -129,14 +129,16 @@ export async function deleteAccount(db, uid, deleteFirebase) {
   if (await isAccountDeletionBlocked(db, uid)) return { ok: false, code: 'billing-cancellation-required' };
   const now = new Date();
   const validAfter = Math.floor(now.getTime() / 1000);
-  await db.prepare(
-    `INSERT INTO account_auth_cutoffs (account_uid, valid_after, updated_at) VALUES (?, ?, ?)
-     ON CONFLICT(account_uid) DO UPDATE SET valid_after = excluded.valid_after, updated_at = excluded.updated_at`,
-  ).bind(uid, validAfter, now.toISOString()).run();
-  await db.prepare(
-    `INSERT INTO account_deletion_jobs (account_uid, requested_at) VALUES (?, ?)
-     ON CONFLICT(account_uid) DO NOTHING`,
-  ).bind(uid, now.toISOString()).run();
+  await db.batch([
+    db.prepare(
+      `INSERT INTO account_auth_cutoffs (account_uid, valid_after, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(account_uid) DO UPDATE SET valid_after = excluded.valid_after, updated_at = excluded.updated_at`,
+    ).bind(uid, validAfter, now.toISOString()),
+    db.prepare(
+      `INSERT INTO account_deletion_jobs (account_uid, requested_at) VALUES (?, ?)
+       ON CONFLICT(account_uid) DO NOTHING`,
+    ).bind(uid, now.toISOString()),
+  ]);
 
   try {
     await completeAccountDeletion(db, uid, deleteFirebase);
