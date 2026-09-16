@@ -4,7 +4,7 @@ namespace Ralven.App.ViewModels;
 
 internal static class ProFeatureAvailability
 {
-    public const bool Enabled = false;
+    public const bool Enabled = true;
 }
 
 internal sealed class ProPageViewModel : BindableBase

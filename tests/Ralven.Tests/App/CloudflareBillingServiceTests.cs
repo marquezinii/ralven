@@ -110,26 +110,26 @@ public sealed class CloudflareBillingServiceTests
     }
 
     [Fact]
-    public void CheckoutRemainsLockedWhileProIsInDevelopment()
+    public void CheckoutRequiresConsentAndLocksWhileBusySignedOutOrInDemo()
     {
         var vm = new ProPageViewModel();
         var offer = new BillingOffer("ralven_pro_monthly_1990", 1990, "BRL", 1);
         vm.SetSession(true, false);
         vm.SetSnapshot(new(offer, true, null));
-        Assert.False(vm.CanCheckout);
+        Assert.False(vm.CanCheckout); // consent not given yet
         vm.Consent = true;
-        Assert.False(vm.CanCheckout);
-        Assert.False(vm.CanRefresh);
+        Assert.True(vm.CanCheckout);
+        Assert.True(vm.CanRefresh);
         vm.SetBusy(true);
         Assert.False(vm.CanCheckout);
         vm.SetBusy(false);
         vm.SetSnapshot(new(offer with { AmountCents = 2990, Key = "ralven_pro_monthly_2990" }, true, null));
-        Assert.False(vm.Consent);
+        Assert.False(vm.Consent); // a changed offer requires re-consent
         Assert.False(vm.CanCheckout);
         vm.SetSession(false, false);
         Assert.Null(vm.Offer);
         Assert.False(vm.CanCancel);
-        vm.SetSession(true, true);
+        vm.SetSession(true, true); // demo mode never offers real checkout
         vm.Consent = true;
         Assert.False(vm.CanCheckout);
         Assert.False(vm.CanRefresh);
