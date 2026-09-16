@@ -81,14 +81,19 @@ public sealed class PublicExposureHardeningTests
     }
 
     [Fact]
-    public void ProductionSmoke_ExercisesAuthenticatedAccountBackendAndCleansFirebaseUser()
+    public void ProductionSmoke_ExercisesCompleteSyntheticAccountLifecycle()
     {
         var root = FindRepositoryRoot();
         var smoke = File.ReadAllText(Path.Combine(root, "scripts", "Test-ProductionDiagnostics.ps1"));
 
         Assert.Contains("accounts:signUp", smoke, StringComparison.Ordinal);
+        Assert.Contains("accounts:signInWithPassword", smoke, StringComparison.Ordinal);
+        Assert.Contains("securetoken.googleapis.com/v1/token", smoke, StringComparison.Ordinal);
         Assert.Contains("accountProfileEndpoint", smoke, StringComparison.Ordinal);
         Assert.Contains("Authorization = \"Bearer $firebaseIdToken\"", smoke, StringComparison.Ordinal);
+        Assert.Contains("email-verification-required", smoke, StringComparison.Ordinal);
+        Assert.Contains("accountDeleteEndpoint", smoke, StringComparison.Ordinal);
+        Assert.Contains("Deleted account token remained usable", smoke, StringComparison.Ordinal);
         Assert.Contains("accounts:delete", smoke, StringComparison.Ordinal);
         Assert.Contains("finally", smoke, StringComparison.Ordinal);
     }

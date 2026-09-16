@@ -35,9 +35,10 @@ rota autorizados.
   backup D1 dessa operação;
 - execute `scripts/Test-ProductionDiagnostics.ps1`: o gate envia um evento
   anônimo sintético, confirma o contrato completo no D1 usado pelo dashboard e
-  remove a linha; cria também uma conta Firebase sintética, exige que o Worker
-  aceite seu token em `/account/profile` e remove a conta no `finally`; também
-  envia um crash sintético marcado
+  remove a linha; cria também uma conta Firebase sintética, valida login,
+  renovação de sessão, bloqueio do perfil antes da confirmação do e-mail,
+  revogação do token e exclusão coordenada pelo Worker (com limpeza direta de
+  contingência se o fluxo falhar antes da exclusão); também envia um crash sintético marcado
   `ralven.release_smoke=true` e exige o aceite do Sentry;
 - antes das migrations e do deploy, confirme pelo preflight do workflow que os
   quatro secrets obrigatórios de contas (`FIREBASE_WEB_API_KEY`,

@@ -191,9 +191,26 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
 
     public async Task<FirebaseAuthResult> RefreshEmailVerificationAsync(CancellationToken cancellationToken = default)
     {
-        var token = await GetIdTokenAsync(cancellationToken).ConfigureAwait(false);
-        if (token is null) return Result();
-        return await LoadUserAsync(token, cancellationToken).ConfigureAwait(false);
+        string? refresh;
+        bool persist;
+        long generation;
+        await sessionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (Current.User is null) return Result();
+            refresh = refreshToken;
+            persist = persistSession;
+            generation = sessionGeneration;
+        }
+        finally { sessionLock.Release(); }
+
+        // accounts:lookup sees the newly verified user immediately, but the
+        // existing ID token keeps its old email_verified=false claim until it
+        // is refreshed. The Worker authorizes profile creation from that
+        // signed claim, so reusing the cached token would strand a confirmed
+        // registration at the profile step until the token naturally expired.
+        return await RefreshAsync(refresh, persist, generation, cancellationToken, force: true)
+            .ConfigureAwait(false);
     }
 
     public async Task<FirebaseAuthResult> RefreshAccountReadinessAsync(CancellationToken cancellationToken = default)
@@ -441,7 +458,12 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
         tokenExpiresAt = default;
     }
 
-    private async Task<FirebaseAuthResult> RefreshAsync(string? refresh, bool persist, long generation, CancellationToken cancellationToken)
+    private async Task<FirebaseAuthResult> RefreshAsync(
+        string? refresh,
+        bool persist,
+        long generation,
+        CancellationToken cancellationToken,
+        bool force = false)
     {
         FirebaseRefreshResponse? payload = null;
         var signedOut = false;
@@ -451,14 +473,19 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
             try
             {
                 if (generation != sessionGeneration || string.IsNullOrWhiteSpace(refresh)) return Result();
-                if (!string.IsNullOrWhiteSpace(idToken) && DateTimeOffset.UtcNow < tokenExpiresAt - TimeSpan.FromMinutes(5)) return Result();
+                if (!force && !string.IsNullOrWhiteSpace(idToken) && DateTimeOffset.UtcNow < tokenExpiresAt - TimeSpan.FromMinutes(5)) return Result();
 
                 using var request = new HttpRequestMessage(HttpMethod.Post, $"{SecureTokenBase}?key={apiKey}") { Content = new FormUrlEncodedContent(new Dictionary<string, string> { ["grant_type"] = "refresh_token", ["refresh_token"] = refresh }) };
                 using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                payload = await response.Content.ReadFromJsonAsync<FirebaseRefreshResponse>(cancellationToken: cancellationToken).ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode || string.IsNullOrWhiteSpace(payload?.id_token) || string.IsNullOrWhiteSpace(payload.refresh_token))
+                if (!response.IsSuccessStatusCode)
                 {
+                    var error = await ReadRefreshErrorAsync(response.Content, cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!IsSessionInvalid(error))
+                    {
+                        return Fail("NETWORK_REQUEST_FAILED");
+                    }
+
                     Interlocked.Increment(ref sessionGeneration);
                     await ClearSessionStateAsync().ConfigureAwait(false);
                     Current = new AuthenticationSnapshot(AuthenticationState.SignedOut, null);
@@ -466,6 +493,15 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
                 }
                 else
                 {
+                    payload = await response.Content
+                        .ReadFromJsonAsync<FirebaseRefreshResponse>(cancellationToken: cancellationToken)
+                        .ConfigureAwait(false);
+                    if (string.IsNullOrWhiteSpace(payload?.id_token)
+                        || string.IsNullOrWhiteSpace(payload.refresh_token))
+                    {
+                        return Fail("NETWORK_REQUEST_FAILED");
+                    }
+
                     if (persist) await sessionStore.WriteAsync(payload.refresh_token, cancellationToken).ConfigureAwait(false);
                     else await sessionStore.ClearAsync().ConfigureAwait(false);
                     idToken = payload.id_token;
@@ -486,6 +522,25 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
         }
 
         return await LoadUserAsync(payload!.id_token!, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<string?> ReadRefreshErrorAsync(
+        HttpContent content,
+        CancellationToken cancellationToken)
+    {
+        await using var stream = await content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+        if (!document.RootElement.TryGetProperty("error", out var error)) return null;
+
+        var code = error.ValueKind switch
+        {
+            JsonValueKind.String => error.GetString(),
+            JsonValueKind.Object when error.TryGetProperty("message", out var message)
+                && message.ValueKind == JsonValueKind.String => message.GetString(),
+            _ => null,
+        };
+        return code?.ToUpperInvariant();
     }
 
     private async Task<FirebaseAuthResult> UpdateAsync(string? password, string? email, CancellationToken cancellationToken)
@@ -874,6 +929,11 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
         StateChanged?.Invoke(this, Current);
     }
     private static DateTimeOffset Expiry(string? seconds) => DateTimeOffset.UtcNow.AddSeconds(long.TryParse(seconds, out var value) ? value : 3600);
-    private static bool IsSessionInvalid(string? error) => error is "INVALID_ID_TOKEN" or "TOKEN_EXPIRED" or "INVALID_REFRESH_TOKEN" or "USER_DISABLED";
+    private static bool IsSessionInvalid(string? error) => error is "INVALID_ID_TOKEN"
+        or "TOKEN_EXPIRED"
+        or "INVALID_REFRESH_TOKEN"
+        or "INVALID_GRANT"
+        or "USER_DISABLED"
+        or "USER_NOT_FOUND";
     public void Dispose() => client.Dispose();
 }

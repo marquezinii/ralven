@@ -241,6 +241,42 @@ public static class TelemetryEndpointPolicy
     }
 }
 
+/// <summary>
+/// Production allowlist for the Worker route that receives Firebase ID
+/// tokens. Development may use another HTTPS origin, but a mutable local
+/// production overlay must never redirect account credentials off-domain.
+/// </summary>
+public static class AccountProfileEndpointPolicy
+{
+    public const string ProfilePath = "/account/profile";
+
+    public static bool TryCreate(
+        string? configuredValue,
+        AppRuntimeEnvironment runtimeEnvironment,
+        out Uri endpoint)
+    {
+        endpoint = null!;
+        if (string.IsNullOrWhiteSpace(configuredValue)
+            || !Uri.TryCreate(configuredValue, UriKind.Absolute, out var candidate)
+            || candidate.Scheme != Uri.UriSchemeHttps
+            || !string.IsNullOrEmpty(candidate.UserInfo)
+            || !string.IsNullOrEmpty(candidate.Query)
+            || !string.IsNullOrEmpty(candidate.Fragment)
+            || !string.Equals(candidate.AbsolutePath, ProfilePath, StringComparison.Ordinal)
+            || runtimeEnvironment == AppRuntimeEnvironment.Production
+                && !string.Equals(
+                    candidate.Host,
+                    TelemetryEndpointPolicy.ProductionHost,
+                    StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        endpoint = candidate;
+        return true;
+    }
+}
+
 public static class FirebaseAuthConfiguration
 {
     public static bool TryGetApiKey(string? configuredValue, out string apiKey)

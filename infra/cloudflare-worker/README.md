@@ -169,8 +169,8 @@ accepted current terms version — in `account_profiles`, keyed by the verified
 Firebase UID. It accepts only an `email_verified=true` token. A username
 conflict returns `409 { "error": "username-taken" }`; the client is expected
 to let the user pick another one without discarding the Firebase account
-already created. `DELETE /account` checks the billing block, persists a cutoff
-and durable deletion job, deletes Firebase through the administrative API, and
+already created. `DELETE /account` checks the billing block, atomically persists
+a cutoff and durable deletion job, deletes Firebase through the administrative API, and
 only then removes the D1 profile and cascading account data. A scheduled retry
 resumes an interrupted deletion every 15 minutes; the cutoff and job do not
 cascade with the profile. The old `DELETE /account/profile` returns 410 and can

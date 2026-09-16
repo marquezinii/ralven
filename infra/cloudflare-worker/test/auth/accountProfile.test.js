@@ -97,6 +97,11 @@ function fakeDb({ throwsWithMessage, billingCheckout = false, insertChanges = 1,
   const inserted = [];
   return {
     inserted,
+    async batch(statements) {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      return results;
+    },
     prepare(sql) {
       return {
         bind(...params) {
@@ -246,6 +251,20 @@ test('account deletion records a durable cutoff and retries when Firebase is una
   };
   assert.deepEqual(await deleteAccount(orderedDb, 'firebase-uid-123', async () => { order.push('firebase'); }), { ok: true, pending: false });
   assert.deepEqual(order, ['cutoff', 'job', 'firebase', 'profile', 'job-delete']);
+});
+
+test('account deletion records its cutoff and durable job atomically', async () => {
+  const db = fakeDb();
+  db.batch = async statements => {
+    assert.equal(statements.length, 2);
+    throw new Error('simulated transaction failure');
+  };
+
+  await assert.rejects(
+    deleteAccount(db, 'firebase-uid-123', async () => {}),
+    /simulated transaction failure/,
+  );
+  assert.deepEqual(db.inserted, []);
 });
 
 test('account deletion does not call Firebase while billing remains active', async () => {
