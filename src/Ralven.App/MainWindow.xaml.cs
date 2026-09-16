@@ -138,7 +138,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             windowsSystemHealthInspector: demoMode
                 ? new SyntheticWindowsSystemHealthInspector()
                 : new WindowsSystemHealthInspector(),
-            personalWorkspaceService: new PersonalWorkspaceService(AuthorizeProOperationAsync, inMemory: demoMode));
+            personalWorkspaceService: new PersonalWorkspaceService(AuthorizeProOperationAsync, inMemory: demoMode,
+                applicationInventory: demoMode ? new SyntheticWindowsApplicationInventoryInspector() : new WindowsApplicationInventoryInspector(),
+                driverVersion: demoMode ? new SyntheticDriverVersionInspector() : new WindowsDriverVersionInspector()));
 
         StartupTrace.Mark("window-services-ready");
         // Independent disk/system reads overlap WPF construction. The awaited
