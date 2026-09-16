@@ -1788,6 +1788,8 @@
   <data name="Ultra.Change.BackgroundCapture" xml:space="preserve"><value>The Windows background recording setting changed.</value></data>
   <data name="Ultra.Change.LowDiskSpace" xml:space="preserve"><value>Free space on the system drive fell below 10 GB.</value></data>
   <data name="Ultra.Change.PointerAcceleration" xml:space="preserve"><value>The Windows pointer acceleration setting changed.</value></data>
+  <data name="Ultra.Change.StartupApps" xml:space="preserve"><value>A program was added to or removed from Windows startup.</value></data>
+  <data name="Ultra.Change.GraphicsDriver" xml:space="preserve"><value>The graphics driver version changed.</value></data>
   <data name="Ultra.Measure.Title" xml:space="preserve"><value>Compare the same activity</value></data>
   <data name="Ultra.Measure.Help" xml:space="preserve"><value>1. Choose a routine and name the task. 2. Run the same activity while collecting 30 samples (about 30 seconds). 3. Repeat under the same conditions after reviewing your plan. Values show resource usage, not FPS or proof of performance gain. Do not compare idle time with a game or render.</value></data>
   <data name="Ultra.Measure.Context" xml:space="preserve"><value>Task name (use the same name to compare)</value></data>
@@ -1890,8 +1892,10 @@ Average CPU {3} · GPU {4} · RAM {5} · Disk {6}</value></data>
   <data name="Pro.Error.Request" xml:space="preserve"><value>The request could not be confirmed. Refresh to check its status before retrying. A pending charge or cancellation must not be treated as complete.</value></data>
   <data name="Personal.Introduction" xml:space="preserve"><value>Your routines, your choices. Save a personal plan, follow changes and compare the same activity. Saving a routine never changes Windows.</value></data>
   <data name="Personal.Upgrade" xml:space="preserve"><value>Explore Ralven Pro</value></data>
-  <data name="Personal.History.Count" xml:space="preserve"><value>{0}/30 measurements · {1}/60 changes saved on this PC</value></data>
+  <data name="Personal.History.Count" xml:space="preserve"><value>{0} measurements · {1} changes saved in the last 90 days</value></data>
   <data name="Personal.Tracking.Latest" xml:space="preserve"><value>Latest recorded change: {0} · {1}</value></data>
+  <data name="Personal.Change.Evidence" xml:space="preserve"><value>({0} → {1})</value></data>
+  <data name="Personal.Change.Association" xml:space="preserve"><value>· possibly related to a shift in {0}</value></data>
   <data name="Personal.Tracking.Analyze" xml:space="preserve"><value>Analyze this PC again</value></data>
   <data name="Personal.Tracking.Review" xml:space="preserve"><value>Review my personal plan</value></data>
   <data name="Personal.Measure.CompareHelp" xml:space="preserve"><value>Choose a measurement and an earlier baseline. Only matching activities, hardware and Windows versions can be compared. Differences are percentage points, not performance gains.</value></data>
