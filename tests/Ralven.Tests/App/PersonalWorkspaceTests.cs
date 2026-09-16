@@ -152,11 +152,13 @@ public sealed class PersonalWorkspaceTests
         await service.SetTrackingAsync(true, reference, Token);
         await service.ObserveAsync(reference with
         {
-            CapturedAt = DateTimeOffset.UtcNow.AddDays(-91), GameMode = WindowsGamingSettingState.Disabled
+            CapturedAt = DateTimeOffset.UtcNow.AddDays(-91),
+            GameMode = WindowsGamingSettingState.Disabled
         }, Token);
         await service.ObserveAsync(reference with
         {
-            CapturedAt = DateTimeOffset.UtcNow.AddDays(-1), GameMode = WindowsGamingSettingState.Enabled
+            CapturedAt = DateTimeOffset.UtcNow.AddDays(-1),
+            GameMode = WindowsGamingSettingState.Enabled
         }, Token);
         var workspace = await service.LoadAsync(Token);
         Assert.Single(workspace.Changes);
@@ -249,10 +251,22 @@ public sealed class PersonalWorkspaceTests
             driverVersion: new FakeDriverVersionInspector("NVIDIA GeForce RTX 3070", "31.0.15.3623"));
         var diagnostic = new AppDiagnostic
         {
-            Edition = FiveMEdition.Unknown, IsFiveMRunning = false, GtaVDetected = false, GtaVIsRunning = false,
-            GtaVGraphicsSettingsPath = string.Empty, CpuName = "Test CPU", GpuName = "Test GPU", GpuNames = ["Test GPU"],
-            TotalMemoryGiB = 16, AvailableMemoryGiB = 8, LogicalProcessorCount = 8, FreeDiskGiB = 100, LegacyCacheBytes = 0,
-            OsLabel = "Windows 11", ReadinessScore = 80, RecommendedProfile = OptimizationProfile.Balanced,
+            Edition = FiveMEdition.Unknown,
+            IsFiveMRunning = false,
+            GtaVDetected = false,
+            GtaVIsRunning = false,
+            GtaVGraphicsSettingsPath = string.Empty,
+            CpuName = "Test CPU",
+            GpuName = "Test GPU",
+            GpuNames = ["Test GPU"],
+            TotalMemoryGiB = 16,
+            AvailableMemoryGiB = 8,
+            LogicalProcessorCount = 8,
+            FreeDiskGiB = 100,
+            LegacyCacheBytes = 0,
+            OsLabel = "Windows 11",
+            ReadinessScore = 80,
+            RecommendedProfile = OptimizationProfile.Balanced,
             PerformancePressure = PerformancePressureLevel.Low,
             StreamingSoftware = new StreamingSoftwareSnapshot([], DateTimeOffset.UtcNow, true, true)
         };
