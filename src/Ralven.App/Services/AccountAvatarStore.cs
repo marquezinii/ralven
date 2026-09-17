@@ -31,10 +31,7 @@ public sealed class AccountAvatarStore
     private readonly string directory;
 
     public AccountAvatarStore()
-        : this(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ProductIdentity.Name,
-            "avatars"))
+        : this(AppDataPaths.Combine("avatars"))
     {
     }
 

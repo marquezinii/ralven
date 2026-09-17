@@ -227,15 +227,16 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var historyPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Ralven", "history.json");
-            if (!File.Exists(historyPath))
+            // O histórico vive nos journals de transação desde que `history.json`
+            // deixou de ser escrito; ler o arquivo antigo mantinha esta dimensão
+            // permanentemente nula em qualquer instalação não migrada.
+            var journalDirectory = AppDataPaths.Combine("Transactions");
+            if (!Directory.Exists(journalDirectory))
             {
                 return null;
             }
 
-            var lastWrite = File.GetLastWriteTimeUtc(historyPath);
+            var lastWrite = Directory.GetLastWriteTimeUtc(journalDirectory);
             var daysSince = (int)(DateTime.UtcNow - lastWrite).TotalDays;
             return daysSince switch
             {

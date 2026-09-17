@@ -21,10 +21,7 @@ internal sealed class JsonApplicationUpdateIgnoreStore : IApplicationUpdateIgnor
     private readonly string path;
 
     public JsonApplicationUpdateIgnoreStore()
-        : this(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ProductIdentity.Name,
-            "application-update-ignores.json"))
+        : this(AppDataPaths.Combine("application-update-ignores.json"))
     {
     }
 

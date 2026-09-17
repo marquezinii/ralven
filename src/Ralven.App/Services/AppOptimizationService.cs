@@ -61,9 +61,7 @@ public sealed partial class AppOptimizationService : IAppOptimizationService
         this.localization = localization ?? LocalizationService.Current;
         this.administratorReceiptExists = administratorReceiptExists ?? HasAdministratorReceipt;
         appDataDirectory = appDataDirectoryOverride is null
-            ? Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                ProductIdentity.Name)
+            ? AppDataPaths.Root
             : Path.GetFullPath(appDataDirectoryOverride);
         journalDirectory = Path.Combine(appDataDirectory, "Transactions");
         logsDirectory = Path.Combine(appDataDirectory, "Logs");

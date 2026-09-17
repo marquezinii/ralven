@@ -39,9 +39,7 @@ public sealed class SignedManifestUpdateService : IReleaseUpdateService, IDispos
                     CertificateRevocationCheckMode = X509RevocationMode.Online,
                 },
             },
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Ralven"),
+            AppDataPaths.Root,
             packageKind)
     {
     }

@@ -452,12 +452,8 @@ public partial class MainWindow
         SetAccountSettingsBusy(true);
         try
         {
-            var reauthenticated = await ReauthenticateAccountSettingsAsync(user);
-            if (!reauthenticated.Succeeded)
+            if (!await TryReauthenticateAccountSettingsAsync(user))
             {
-                AccountSettingsStatus(
-                    reauthenticated.Error ?? LocalizationService.Current.GetString("Account.Error.ReauthenticationRequired"),
-                    true);
                 return;
             }
 
@@ -526,12 +522,8 @@ public partial class MainWindow
                 return;
             }
 
-            var reauthenticated = await ReauthenticateAccountSettingsAsync(user);
-            if (!reauthenticated.Succeeded)
+            if (!await TryReauthenticateAccountSettingsAsync(user))
             {
-                AccountSettingsStatus(
-                    reauthenticated.Error ?? LocalizationService.Current.GetString("Account.Error.ReauthenticationRequired"),
-                    true);
                 return;
             }
 
@@ -571,12 +563,8 @@ public partial class MainWindow
         try
         {
             SetAccountSettingsBusy(true);
-            var reauthenticated = await ReauthenticateAccountSettingsAsync(user);
-            if (!reauthenticated.Succeeded)
+            if (!await TryReauthenticateAccountSettingsAsync(user))
             {
-                AccountSettingsStatus(
-                    reauthenticated.Error ?? LocalizationService.Current.GetString("Account.Error.ReauthenticationRequired"),
-                    true);
                 return;
             }
 
@@ -680,6 +668,26 @@ public partial class MainWindow
         AccountSettingsDeleteAccountButton.IsEnabled = !busy && hasIdentityProvider;
         AccountSettingsLogoutButton.IsEnabled = !busy;
         Cursor = busy ? System.Windows.Input.Cursors.Wait : null;
+    }
+
+    /// <summary>
+    /// Reautentica antes de uma mudança sensível e, quando falha, já publica o
+    /// motivo na área de status. Existe porque os três fluxos que exigem
+    /// reautenticação (Google, e-mail e exclusão de conta) repetiam a mesma
+    /// checagem e a mesma mensagem de recuo.
+    /// </summary>
+    private async Task<bool> TryReauthenticateAccountSettingsAsync(FirebaseUser user)
+    {
+        var reauthenticated = await ReauthenticateAccountSettingsAsync(user);
+        if (reauthenticated.Succeeded)
+        {
+            return true;
+        }
+
+        AccountSettingsStatus(
+            reauthenticated.Error ?? LocalizationService.Current.GetString("Account.Error.ReauthenticationRequired"),
+            true);
+        return false;
     }
 
     private async Task<FirebaseAuthResult> ReauthenticateAccountSettingsAsync(FirebaseUser user)

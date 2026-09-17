@@ -256,19 +256,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         }
 
         return new SilentUpdateInstaller(
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                ProductIdentity.Name,
-                "Updates"),
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                ProductIdentity.Name,
-                "Logs"),
-            Path.Combine(AppContext.BaseDirectory, "updater", "Ralven.Updater.exe"),
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                ProductIdentity.Name,
-                "Updater"));
+            AppDataPaths.Combine("Updates"),
+            AppDataPaths.Combine("Logs"),
+            Path.Combine(AppContext.BaseDirectory, "updater", SilentUpdateInstaller.UpdaterFileName),
+            AppDataPaths.Combine("Updater"));
     }
 
     private sealed record MainWindowTelemetry(
@@ -297,11 +288,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
             out _))
         {
             var queued = new QueuedCloudflareTelemetryService(
-                new LocalTelemetryQueue(Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    ProductIdentity.Name,
-                    "Telemetry",
-                    "pending")),
+                new LocalTelemetryQueue(AppDataPaths.Combine("Telemetry", "pending")),
                 new CloudflareTelemetryTransport(telemetryEndpoint, options.Environment));
             return new MainWindowTelemetry(queued, queued);
         }

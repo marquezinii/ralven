@@ -59,8 +59,7 @@ public sealed class PersonalWorkspaceService
     {
         this.authorizePro = authorizePro;
         this.inMemory = inMemory;
-        this.directory = Path.GetFullPath(directory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ProductIdentity.Name, "Personal"));
+        this.directory = Path.GetFullPath(directory ?? AppDataPaths.Combine("Personal"));
         this.localization = localization ?? LocalizationService.Current;
         this.mouseAcceleration = mouseAcceleration ?? new WindowsMouseAccelerationInspector();
     }

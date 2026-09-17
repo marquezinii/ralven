@@ -46,10 +46,7 @@ public sealed class WindowsGamingControlsService
         inspector = new WindowsGamingSettingsInspector(registry);
         processInspector = fiveMProcessInspector;
         actions = CreateActions(registry, fiveMProcessInspector);
-        var journalStore = new JsonWindowsTransactionJournalStore(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ProductIdentity.Name,
-            "Transactions"));
+        var journalStore = new JsonWindowsTransactionJournalStore(AppDataPaths.Combine("Transactions"));
         engine = new WindowsTransactionEngine(
             new WindowsActionCatalog(actions),
             journalStore);
