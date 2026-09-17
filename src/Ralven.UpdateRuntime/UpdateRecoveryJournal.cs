@@ -34,8 +34,7 @@ public sealed class UpdateRecoveryJournal
         UpdatePathSafety.EnsureNoReparsePoints(path);
         var transaction = JsonSerializer.Deserialize<UpdateTransaction>(File.ReadAllText(path))
             ?? throw new InvalidDataException("Journal de recuperação inválido.");
-        if (transaction.Id.Length != 32 || !transaction.Id.All(char.IsAsciiHexDigit)
-            || transaction.Nonce.Length != 64 || !transaction.Nonce.All(char.IsAsciiHexDigit)
+        if (!UpdateTransactionIdentity.IsValid(transaction.Id, transaction.Nonce)
             || !Version.TryParse(transaction.PreviousVersion, out var previous)
             || !Version.TryParse(transaction.CandidateVersion, out var candidate)
             || candidate <= previous)

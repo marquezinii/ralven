@@ -9,26 +9,23 @@ namespace Ralven.UpdateRuntime;
 /// </summary>
 internal static class AtomicFile
 {
-    public static void WriteBytes(string path, byte[] bytes)
-    {
-        path = UpdatePathSafety.EnsureNoReparsePoints(path);
-        EnsureDirectory(path);
-        path = UpdatePathSafety.EnsureNoReparsePoints(path);
-        var temporary = TemporaryPathFor(path);
-        UpdatePathSafety.EnsureNoReparsePoints(temporary);
-        File.WriteAllBytes(temporary, bytes);
-        UpdatePathSafety.EnsureNoReparsePoints(path);
-        ReplaceInto(path, temporary);
-    }
+    public static void WriteBytes(string path, byte[] bytes) =>
+        Write(path, temporary => File.WriteAllBytes(temporary, bytes));
 
-    public static void WriteText(string path, string contents)
+    public static void WriteText(string path, string contents) =>
+        Write(path, temporary => File.WriteAllText(temporary, contents));
+
+    // As revalidações repetidas do destino são deliberadas: cada uma fecha a
+    // janela entre o passo anterior e o próximo, em que o caminho poderia ser
+    // trocado por um link.
+    private static void Write(string path, Action<string> writeTemporary)
     {
         path = UpdatePathSafety.EnsureNoReparsePoints(path);
         EnsureDirectory(path);
         path = UpdatePathSafety.EnsureNoReparsePoints(path);
         var temporary = TemporaryPathFor(path);
         UpdatePathSafety.EnsureNoReparsePoints(temporary);
-        File.WriteAllText(temporary, contents);
+        writeTemporary(temporary);
         UpdatePathSafety.EnsureNoReparsePoints(path);
         ReplaceInto(path, temporary);
     }

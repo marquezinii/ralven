@@ -610,7 +610,7 @@ public sealed class WindowsOptimizationActionFactory
         }
 
         if (!plan.IsExecutable
-            || !IsSupportedScopeAndEdition(plan.Scope, plan.Edition)
+            || !PlanScopeSupport.IsSupported(plan.Scope, plan.Edition)
             || plan.Blocks.Count != 0
             || plan.Actions.Count == 0)
         {
@@ -646,15 +646,6 @@ public sealed class WindowsOptimizationActionFactory
             }
         }
     }
-
-    private static bool IsSupportedScopeAndEdition(
-        OptimizationScope scope,
-        FiveMEdition edition) => scope switch
-        {
-            OptimizationScope.FiveMLegacy => edition == FiveMEdition.Legacy,
-            OptimizationScope.GeneralWindows => Enum.IsDefined(edition),
-            _ => false
-        };
 
     private static WindowsOptimizationEnvironment ValidateEnvironment(
         WindowsOptimizationEnvironment environment)
