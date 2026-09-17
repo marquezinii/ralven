@@ -501,6 +501,9 @@
                                        AutomationProperties.HeadingLevel="Level2" />
                             <TextBlock Grid.Column="1" Text="{Binding PlanHeader}" Style="{StaticResource TickLabelText}" VerticalAlignment="Center" Margin="18,0,0,0" />
                         </Grid>
+                        <CheckBox IsChecked="{Binding StoreHagsExperiment}" IsEnabled="{Binding IsAggressiveSelected}"
+                                  Visibility="{Binding IsStoreCertificationCandidate, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                  Content="{Binding [Actions.windows.gaming.hags.toggle.Name], Source={StaticResource LocalizedStrings}}" Margin="0,7,0,0" />
                         <TextBlock Text="{Binding PlanSummary}" Style="{StaticResource SecondaryText}" Margin="0,7,0,0" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding PlanNoticesText}" Style="{StaticResource CaptionText}" Margin="0,8,0,0" TextWrapping="Wrap"
                                    Visibility="{Binding PlanNoticesText, Converter={StaticResource StringToVisibilityConverter}}" />

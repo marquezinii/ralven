@@ -2,6 +2,16 @@
 
 ## Conclusão
 
+### Gate atualizado — primeira certificação
+
+Após a resposta Microsoft informada pelo proprietário, a decisão de `allowElevation`
+será solicitada durante a certificação do produto completo, não aguardada como
+pré-aprovação por e-mail. O candidato mínimo separado está em `packaging/msix-store`;
+ver [checklist do Partner Center](microsoft-store-submission-checklist.md),
+[roteiro do certificador](store-certification-test-plan.md) e
+[validação do candidato](store-submission-validation.md). A POC abaixo permanece
+evidência histórica; seus resultados não comprovam o novo candidato.
+
 **VIÁVEL COM RESTRIÇÕES**
 
 O Ralven pode ser empacotado como aplicativo desktop MSIX sem remover o

@@ -46,6 +46,7 @@ public sealed class WindowsStartupRegistrationService : IStartupRegistrationServ
 
     public bool IsEnabled()
     {
+        if (Ralven.UpdateRuntime.PackageIdentity.IsPackaged) return false;
         using var currentUser = currentUserFactory();
         using var runKey = currentUser.OpenSubKey(RunSubKey, writable: false);
         return runKey?.GetValue(ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames)
@@ -55,6 +56,7 @@ public sealed class WindowsStartupRegistrationService : IStartupRegistrationServ
 
     public void SetEnabled(bool enabled)
     {
+        if (Ralven.UpdateRuntime.PackageIdentity.IsPackaged) return;
         using var currentUser = currentUserFactory();
         if (enabled)
         {

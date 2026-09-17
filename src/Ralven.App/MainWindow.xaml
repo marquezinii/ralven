@@ -749,7 +749,7 @@
                                         <Grid>
                                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding [Settings.StartWithWindows.Title], Source={StaticResource LocalizedStrings}}" Style="{StaticResource BodyStrongText}" Margin="0,0,24,0" VerticalAlignment="Center" />
-                                            <CheckBox Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ToggleSwitchStyle}" IsChecked="{Binding LaunchAtStartup}" AutomationProperties.Name="{Binding [Settings.StartWithWindows.Title], Source={StaticResource LocalizedStrings}}" AutomationProperties.HelpText="{Binding [Settings.StartWithWindows.Description], Source={StaticResource LocalizedStrings}}" />
+                                            <CheckBox Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource ToggleSwitchStyle}" IsEnabled="{Binding CanConfigureStartup}" IsChecked="{Binding LaunchAtStartup}" AutomationProperties.Name="{Binding [Settings.StartWithWindows.Title], Source={StaticResource LocalizedStrings}}" AutomationProperties.HelpText="{Binding [Settings.StartWithWindows.Description], Source={StaticResource LocalizedStrings}}" />
                                         </Grid>
                                     </Border>
 
