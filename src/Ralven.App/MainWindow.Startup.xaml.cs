@@ -16,6 +16,7 @@ public partial class MainWindow
 
     private static void ConfirmUpdateHealthIfRequested()
     {
+        if (PackageIdentity.IsPackaged) return;
         var arguments = Environment.GetCommandLineArgs();
         var transaction = arguments.FirstOrDefault(value => value.StartsWith("--update-transaction=", StringComparison.OrdinalIgnoreCase))?["--update-transaction=".Length..];
         var nonce = arguments.FirstOrDefault(value => value.StartsWith("--update-nonce=", StringComparison.OrdinalIgnoreCase))?["--update-nonce=".Length..];
@@ -45,6 +46,7 @@ public partial class MainWindow
 
     private static void InvalidateUpdateHealthReceiptIfRequested()
     {
+        if (PackageIdentity.IsPackaged) return;
         var runtimeRoot = RuntimeLayout.Resolve(AppContext.BaseDirectory).RuntimeRoot;
         if (runtimeRoot is null) return;
         try { new UpdateHealthReceiptStore(runtimeRoot).Invalidate(); }

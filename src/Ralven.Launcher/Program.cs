@@ -39,6 +39,17 @@ internal static class Program
                 && !argument.StartsWith("--wait-for-start=", StringComparison.OrdinalIgnoreCase))
             .ToArray();
         var runtimeRoot = Path.Combine(AppContext.BaseDirectory, "Runtime");
+        if (PackageIdentity.IsPackaged)
+        {
+            // Store owns activation and updates. Read the bundled pointer without recovery writes.
+            var bundled = new RuntimeActivationStore(runtimeRoot);
+            var executable = Path.Combine(bundled.VersionsRoot, bundled.ReadActiveVersion(), "Ralven.exe");
+            UpdatePathSafety.EnsureNoReparsePoints(executable);
+            var start = new ProcessStartInfo(executable) { WorkingDirectory = Path.GetDirectoryName(executable)!, UseShellExecute = false };
+            foreach (var argument in forwardedArguments) start.ArgumentList.Add(argument);
+            using var process = Process.Start(start) ?? throw new InvalidOperationException("Windows could not start Ralven.");
+            return 0;
+        }
         using var lifecycleLease = RuntimeUpdateLease.TryAcquire(runtimeRoot);
         if (lifecycleLease is null) return 0;
         var localization = LocalizationService.Current;

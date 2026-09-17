@@ -14,6 +14,20 @@ namespace Ralven.App.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    private bool storeHagsExperiment;
+
+    public bool IsStoreCertificationCandidate => Ralven.UpdateRuntime.PackageIdentity.IsPackaged
+        && optimizationScope == OptimizationScope.FiveMLegacy;
+
+    public bool StoreHagsExperiment
+    {
+        get => storeHagsExperiment;
+        set
+        {
+            if (IsBusy || isPersonalBusy) return;
+            if (SetProperty(ref storeHagsExperiment, value)) RefreshPlan();
+        }
+    }
     public OptimizationScope OptimizationScope => optimizationScope;
 
     public bool IsGeneralWindowsOptimization => optimizationScope == OptimizationScope.GeneralWindows;
@@ -180,6 +194,7 @@ public sealed partial class MainViewModel
         }
 
         optimizationScope = scope;
+        OnPropertyChanged(nameof(IsStoreCertificationCandidate));
         isUltraSelected = false;
         RefreshUltraPresentation();
         ApplyReport(null);
@@ -565,6 +580,7 @@ public sealed partial class MainViewModel
             PreferHighPerformanceGpu = scope == OptimizationScope.FiveMLegacy,
             DisableBackgroundCapture = true,
             UseSessionPerformancePowerPlan = profile != OptimizationProfile.Light,
+            ToggleHagsExperiment = IsStoreCertificationCandidate && StoreHagsExperiment,
             ApplyLegacyGraphicsPreset = scope == OptimizationScope.FiveMLegacy,
             ApplyGtaVGraphicsPreset = scope == OptimizationScope.FiveMLegacy
                 && diagnostic?.GtaVDetected == true,
