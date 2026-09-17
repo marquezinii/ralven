@@ -222,7 +222,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         string? installRoot,
         string? runtimeRoot)
     {
-        if (demoMode)
+        if (demoMode || PackageIdentity.IsPackaged)
         {
             return new SessionStartupRegistrationService();
         }
@@ -235,7 +235,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     private IReleaseUpdateService? CreateReleaseUpdateService(bool demoMode, string? runtimeRoot)
     {
-        return demoMode
+        return demoMode || PackageIdentity.IsPackaged
             ? null
             : new SignedManifestUpdateService(
                 runtimeRoot is null ? ReleasePackageKind.Installer : ReleasePackageKind.Runtime);
@@ -246,7 +246,7 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         string? installRoot,
         string? runtimeRoot)
     {
-        if (demoMode)
+        if (demoMode || PackageIdentity.IsPackaged)
         {
             return null;
         }
