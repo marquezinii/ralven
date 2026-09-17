@@ -15,6 +15,7 @@ internal static class Program
     [STAThread]
     private static async Task<int> Main(string[] args)
     {
+        if (PackageIdentity.IsPackaged) Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
         var dataRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ralven");
         var diagnostics = new UpdaterDiagnostics(dataRoot);
         var telemetryAuthorized = UpdaterDiagnostics.IsTelemetryAuthorized(dataRoot);
