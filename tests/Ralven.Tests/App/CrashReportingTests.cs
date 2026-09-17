@@ -169,6 +169,21 @@ public sealed class RemoteServicesOptionsLoaderTests : IDisposable
     }
 
     [Fact]
+    public void Load_TrackedTotpCapability_IsDisabledUnlessExplicitlyEnabled()
+    {
+        WriteConfigFile(
+            "appsettings.Production.json",
+            """{ "environment": "Production", "firebaseTotpEnabled": true }""");
+
+        var enabled = RemoteServicesOptionsLoader.Load(AppRuntimeEnvironment.Production, tempDirectory);
+        File.Delete(Path.Combine(tempDirectory, "Config", "appsettings.Production.json"));
+        var fallback = RemoteServicesOptionsLoader.Load(AppRuntimeEnvironment.Production, tempDirectory);
+
+        Assert.True(enabled.FirebaseTotpEnabled);
+        Assert.False(fallback.FirebaseTotpEnabled);
+    }
+
+    [Fact]
     public void Load_LocalOverlayHasANullField_DoesNotClearTheTrackedValue()
     {
         WriteConfigFile(
@@ -261,6 +276,34 @@ public sealed class TelemetryEndpointPolicyTests
 
 public sealed class FirebaseAuthConfigurationTests
 {
+    [Fact]
+    public void AccountProfileEndpoint_ProductionAcceptsOnlyTheOfficialRoute()
+    {
+        Assert.True(AccountProfileEndpointPolicy.TryCreate(
+            "https://api.vemryx.com/account/profile",
+            AppRuntimeEnvironment.Production,
+            out var endpoint));
+        Assert.Equal("https://api.vemryx.com/account/profile", endpoint.AbsoluteUri);
+
+        Assert.False(AccountProfileEndpointPolicy.TryCreate(
+            "https://attacker.example/account/profile",
+            AppRuntimeEnvironment.Production,
+            out _));
+        Assert.False(AccountProfileEndpointPolicy.TryCreate(
+            "https://api.vemryx.com/account/profile?redirect=1",
+            AppRuntimeEnvironment.Production,
+            out _));
+    }
+
+    [Fact]
+    public void AccountProfileEndpoint_DevelopmentAllowsAnotherHttpsOrigin()
+    {
+        Assert.True(AccountProfileEndpointPolicy.TryCreate(
+            "https://localhost.example/account/profile",
+            AppRuntimeEnvironment.Development,
+            out _));
+    }
+
     [Fact]
     public void TryGetApiKey_AcceptsOnlyPublicApiKeySyntax()
     {

@@ -75,6 +75,52 @@ public sealed class FirebaseAuthServiceTests
     }
 
     [Fact]
+    public async Task RefreshEmailVerificationAsync_RefreshesTheIdTokenBeforeProfileCompletion()
+    {
+        var refreshRequests = 0;
+        var lookupRequests = 0;
+        using var client = new HttpClient(new StubHandler(request =>
+        {
+            if (request.RequestUri!.Host == "securetoken.googleapis.com")
+            {
+                refreshRequests++;
+                return Json("""{"user_id":"uid-1","id_token":"id-verified","refresh_token":"refresh-2","expires_in":"3600"}""");
+            }
+
+            return request.RequestUri.AbsolutePath switch
+            {
+                "/v1/accounts:signUp" => Json("""{"localId":"uid-1","idToken":"id-unverified","refreshToken":"refresh-1","expiresIn":"3600"}"""),
+                "/v1/accounts:lookup" when lookupRequests++ == 0 =>
+                    Json("""{"users":[{"localId":"uid-1","email":"person@example.com","emailVerified":false,"providerUserInfo":[{"providerId":"password"}]}]}"""),
+                "/v1/accounts:lookup" =>
+                    Json("""{"users":[{"localId":"uid-1","email":"person@example.com","emailVerified":true,"providerUserInfo":[{"providerId":"password"}]}]}"""),
+                "/v1/accounts:sendOobCode" => Json("{}"),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            };
+        }));
+        using var service = new FirebaseAuthService(
+            client,
+            "test-firebase-api-key-1234567890",
+            new SecureFirebaseSessionStore(Path.Combine(Path.GetTempPath(), $"firebase-{Guid.NewGuid():N}.session")),
+            new MissingProfileService());
+
+        var registered = await service.RegisterAsync(
+            "person@example.com",
+            "0123456789ab",
+            keepSignedIn: false,
+            global::Xunit.TestContext.Current.CancellationToken);
+        var verified = await service.RefreshEmailVerificationAsync(
+            global::Xunit.TestContext.Current.CancellationToken);
+
+        Assert.Equal(AuthenticationState.EmailVerificationRequired, registered.State);
+        Assert.True(verified.Succeeded);
+        Assert.Equal(AuthenticationState.ProfileCompletionRequired, verified.State);
+        Assert.Equal(1, refreshRequests);
+        Assert.Equal("id-verified", await service.GetIdTokenAsync(
+            global::Xunit.TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task SignInAsync_DoesNotRevealWhetherEmailExists()
     {
         using var service = CreateService([], _ => Json("""{"error":{"message":"EMAIL_NOT_FOUND"}}""", HttpStatusCode.BadRequest));
@@ -106,6 +152,50 @@ public sealed class FirebaseAuthServiceTests
         Assert.Equal("uid-1", service.Current.User!.Uid);
         Assert.Equal("refresh-2", (await store.ReadAsync(global::Xunit.TestContext.Current.CancellationToken))?.RefreshToken);
         await service.LogoutAsync(cancellationToken: global::Xunit.TestContext.Current.CancellationToken);
+        Assert.False(File.Exists(path));
+    }
+
+    [Fact]
+    public async Task RestoreSessionAsync_TransientRefreshFailurePreservesTheStoredSession()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"firebase-{Guid.NewGuid():N}.session");
+        var store = new SecureFirebaseSessionStore(path);
+        await store.WriteAsync("refresh-1", CancellationToken.None);
+        using var client = new HttpClient(new StubHandler(_ =>
+            Json("""{"error":{"message":"SERVICE_UNAVAILABLE"}}""", HttpStatusCode.ServiceUnavailable)));
+        using var service = new FirebaseAuthService(
+            client,
+            "test-firebase-api-key-1234567890",
+            store,
+            new ReadyProfileService());
+
+        var result = await service.RestoreSessionAsync(
+            global::Xunit.TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal("refresh-1", (await store.ReadAsync(
+            global::Xunit.TestContext.Current.CancellationToken))?.RefreshToken);
+    }
+
+    [Fact]
+    public async Task RestoreSessionAsync_InvalidRefreshTokenClearsTheStoredSession()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"firebase-{Guid.NewGuid():N}.session");
+        var store = new SecureFirebaseSessionStore(path);
+        await store.WriteAsync("refresh-1", CancellationToken.None);
+        using var client = new HttpClient(new StubHandler(_ =>
+            Json("""{"error":{"message":"INVALID_REFRESH_TOKEN"}}""", HttpStatusCode.BadRequest)));
+        using var service = new FirebaseAuthService(
+            client,
+            "test-firebase-api-key-1234567890",
+            store,
+            new ReadyProfileService());
+
+        var result = await service.RestoreSessionAsync(
+            global::Xunit.TestContext.Current.CancellationToken);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(AuthenticationState.SignedOut, result.State);
         Assert.False(File.Exists(path));
     }
 

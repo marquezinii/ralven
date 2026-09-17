@@ -169,8 +169,8 @@ accepted current terms version — in `account_profiles`, keyed by the verified
 Firebase UID. It accepts only an `email_verified=true` token. A username
 conflict returns `409 { "error": "username-taken" }`; the client is expected
 to let the user pick another one without discarding the Firebase account
-already created. `DELETE /account` checks the billing block, persists a cutoff
-and durable deletion job, deletes Firebase through the administrative API, and
+already created. `DELETE /account` checks the billing block, atomically persists
+a cutoff and durable deletion job, deletes Firebase through the administrative API, and
 only then removes the D1 profile and cascading account data. A scheduled retry
 resumes an interrupted deletion every 15 minutes; the cutoff and job do not
 cascade with the profile. The old `DELETE /account/profile` returns 410 and can
@@ -205,6 +205,13 @@ wrangler secret put FIREBASE_ADMIN_CLIENT_EMAIL
 wrangler secret put FIREBASE_ADMIN_PRIVATE_KEY
 wrangler secret put MFA_RECOVERY_CODE_HMAC_SECRET
 ```
+
+TOTP enrollment additionally requires Firebase Authentication with Identity
+Platform. The desktop setting stays hidden while `firebaseTotpEnabled` is
+`false`; enable it in the shipped app configuration only after Identity
+Platform and all four Worker secrets above are operational. An account that
+already has a TOTP factor can still open the management flow while the flag is
+off, so disabling the rollout flag cannot strand an existing account.
 
 Discord linking uses `POST /account/discord/link-code` for the authenticated
 Ralven account and the service-authenticated `POST /discord/link/redeem` and
