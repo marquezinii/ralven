@@ -255,9 +255,7 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var fiveMCount = Process.GetProcessesByName("FiveM").Length;
-            var gtaCount = Process.GetProcessesByName("GTA5").Length;
-            var total = fiveMCount + gtaCount;
+            var total = CountRunning("FiveM") + CountRunning("GTA5");
             return total switch
             {
                 0 => 0,
@@ -268,6 +266,27 @@ public sealed partial class MainViewModel
         catch (Exception ex) when (ex is not (OutOfMemoryException or StackOverflowException))
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Conta os processos em execução com este nome e descarta cada
+    /// <see cref="Process"/> retornado: cada instância carrega um handle nativo
+    /// que ficaria para o finalizador a cada relatório de otimização.
+    /// </summary>
+    private static int CountRunning(string processName)
+    {
+        var processes = Process.GetProcessesByName(processName);
+        try
+        {
+            return processes.Length;
+        }
+        finally
+        {
+            foreach (var process in processes)
+            {
+                process.Dispose();
+            }
         }
     }
 

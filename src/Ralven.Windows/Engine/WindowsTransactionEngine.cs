@@ -373,7 +373,7 @@ public sealed class WindowsTransactionEngine
             context.Progress?.Report(new WindowsActionProgress(
                 context.TransactionId,
                 item.Action.Metadata.Id,
-                $"Aplicando {item.Action.Metadata.Name}",
+                WindowsActionText.Format("ActionResults.Engine.Applying", item.Action.Metadata.Name),
                 completedWeight,
                 totalWeight));
 

@@ -416,6 +416,13 @@ public sealed partial class MainViewModel : BindableBase, IDisposable
         liveMetricsTimer = null;
         liveAlertTimer?.Stop();
         liveAlertTimer = null;
+        // Um DispatcherTimer em execução é mantido vivo pelo dispatcher: sem
+        // parar estes dois, um view model descartado durante uma otimização
+        // continuaria enraizado e disparando.
+        headlineDwellTimer?.Stop();
+        headlineDwellTimer = null;
+        operationTimer?.Stop();
+        operationTimer = null;
         (liveSystemMetricsProvider as IDisposable)?.Dispose();
     }
 }

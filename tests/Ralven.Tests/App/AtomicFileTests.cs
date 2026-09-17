@@ -31,11 +31,11 @@ public sealed class AtomicFileTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteTextAsync_CreatesMissingDirectoryAndWritesUtf8()
+    public async Task WriteBytesAsync_CreatesMissingDirectoryAndWritesContent()
     {
         var path = Path.Combine(directory, "nested", "state.txt");
 
-        await AtomicFile.WriteTextAsync(path, "conteúdo com acento", CancellationToken.None);
+        await AtomicFile.WriteBytesAsync(path, Encoding.UTF8.GetBytes("conteúdo com acento"), CancellationToken.None);
 
         Assert.Equal("conteúdo com acento", await File.ReadAllTextAsync(path, Encoding.UTF8));
     }
@@ -75,11 +75,11 @@ public sealed class AtomicFileTests : IDisposable
     public async Task WriteAsync_ValidationFailure_PreservesPreviousContentAndCleansUp()
     {
         var path = Path.Combine(directory, "state.txt");
-        await AtomicFile.WriteTextAsync(path, "original", CancellationToken.None);
+        await AtomicFile.WriteBytesAsync(path, Encoding.UTF8.GetBytes("original"), CancellationToken.None);
 
-        await Assert.ThrowsAsync<IOException>(() => AtomicFile.WriteTextAsync(
+        await Assert.ThrowsAsync<IOException>(() => AtomicFile.WriteBytesAsync(
             path,
-            "substituição",
+            Encoding.UTF8.GetBytes("substituição"),
             CancellationToken.None,
             validateDestination: _ => throw new IOException("destino recusado")));
 
@@ -93,9 +93,9 @@ public sealed class AtomicFileTests : IDisposable
         var path = Path.Combine(directory, "state.txt");
         var validated = new List<string>();
 
-        await AtomicFile.WriteTextAsync(
+        await AtomicFile.WriteBytesAsync(
             path,
-            "conteúdo",
+            Encoding.UTF8.GetBytes("conteúdo"),
             CancellationToken.None,
             validateDestination: validated.Add);
 
@@ -106,12 +106,12 @@ public sealed class AtomicFileTests : IDisposable
     public async Task WriteAsync_Cancelled_DoesNotReplaceTheDestination()
     {
         var path = Path.Combine(directory, "state.txt");
-        await AtomicFile.WriteTextAsync(path, "original", CancellationToken.None);
+        await AtomicFile.WriteBytesAsync(path, Encoding.UTF8.GetBytes("original"), CancellationToken.None);
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => AtomicFile.WriteTextAsync(path, "substituição", cancellation.Token));
+            () => AtomicFile.WriteBytesAsync(path, Encoding.UTF8.GetBytes("substituição"), cancellation.Token));
 
         Assert.Equal("original", await File.ReadAllTextAsync(path));
         Assert.Equal([path], Directory.GetFiles(directory));

@@ -32,6 +32,7 @@ public sealed class SignedManifestUpdateService : IReleaseUpdateService, IDispos
             {
                 AllowAutoRedirect = false,
                 AutomaticDecompression = DecompressionMethods.None,
+                PooledConnectionLifetime = TimeSpan.FromMinutes(5),
                 SslOptions =
                 {
                     EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,

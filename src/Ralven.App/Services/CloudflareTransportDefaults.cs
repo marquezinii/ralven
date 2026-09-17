@@ -27,7 +27,11 @@ internal static class CloudflareTransportDefaults
         var handler = new SocketsHttpHandler
         {
             AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            // Estes clientes são estáticos e vivem enquanto o aplicativo estiver
+            // aberto. Sem reciclar a conexão, o primeiro IP resolvido ficaria
+            // fixado por dias, ignorando uma mudança de DNS do backend.
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5)
         };
         return new HttpClient(handler) { Timeout = timeout };
     }

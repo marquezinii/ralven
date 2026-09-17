@@ -1,5 +1,4 @@
 using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace Ralven.App.Services;
@@ -36,18 +35,6 @@ internal static class AtomicFile
             async (stream, token) => await stream.WriteAsync(bytes, token).ConfigureAwait(false),
             cancellationToken,
             validateDestination);
-    }
-
-    /// <summary>Grava <paramref name="contents"/> em UTF-8 em <paramref name="path"/>.</summary>
-    /// <param name="validateDestination">Ver <see cref="WriteBytesAsync"/>.</param>
-    public static Task WriteTextAsync(
-        string path,
-        string contents,
-        CancellationToken cancellationToken,
-        Action<string>? validateDestination = null)
-    {
-        ArgumentNullException.ThrowIfNull(contents);
-        return WriteBytesAsync(path, Encoding.UTF8.GetBytes(contents), cancellationToken, validateDestination);
     }
 
     /// <summary>Serializa <paramref name="value"/> como JSON em <paramref name="path"/>.</summary>

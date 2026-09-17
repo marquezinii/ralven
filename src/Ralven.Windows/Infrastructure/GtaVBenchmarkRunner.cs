@@ -60,7 +60,7 @@ public sealed class WindowsGtaVBenchmarkRunner : IGtaVBenchmarkRunner
             return new GtaVBenchmarkResult(false, "gta-executable-not-found", [], null);
         }
 
-        var searchRoot = ResolveBenchmarkOutputSearchRoot(gtaVExecutablePath);
+        var searchRoot = ResolveBenchmarkOutputSearchRoot();
         if (searchRoot is null || !Directory.Exists(searchRoot))
         {
             return new GtaVBenchmarkResult(false, "profile-folder-not-found", [], null);
@@ -143,7 +143,7 @@ public sealed class WindowsGtaVBenchmarkRunner : IGtaVBenchmarkRunner
         }
     }
 
-    private static string? ResolveBenchmarkOutputSearchRoot(string gtaVExecutablePath)
+    private static string? ResolveBenchmarkOutputSearchRoot()
     {
         try
         {

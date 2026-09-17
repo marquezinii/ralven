@@ -126,6 +126,7 @@
   <data name="ActionResults.BottleneckClassification.None" xml:space="preserve"><value>Aucun goulot d'étranglement local évident n'a été trouvé dans cet échantillon ; répétez la mesure pendant la charge concernée afin de comparer les signaux.</value></data>
   <data name="ActionResults.Engine.InterruptedAction" xml:space="preserve"><value>L'exécution précédente a été interrompue avant la confirmation de l'état final de cette action.</value></data>
   <data name="ActionResults.Engine.NotRunAfterInterruption" xml:space="preserve"><value>Non exécutée, car l'exécution précédente a été interrompue.</value></data>
+  <data name="ActionResults.Engine.Applying" xml:space="preserve"><value>Application de {0}</value></data>
   <data name="ActionResults.Engine.StepCompleted" xml:space="preserve"><value>Étape terminée.</value></data>
   <data name="ActionResults.Engine.NotRunAfterCriticalFailure" xml:space="preserve"><value>Non exécutée après une défaillance critique antérieure.</value></data>
   <data name="ActionResults.Engine.UnmetPrerequisite" xml:space="preserve"><value>Prérequis non satisfait : {0}.</value></data>
