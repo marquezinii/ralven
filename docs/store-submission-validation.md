@@ -219,3 +219,7 @@ Manual cleanup, after any further local testing:
 2. Run certmgr.msc. Under Personal > Certificates and Trusted Root Certification Authorities > Certificates, locate the exact development thumbprint above using Certificate > Details > Thumbprint; delete only that generated leaf/key/trust as offered by Windows. No other certificate is in scope.
 3. Run certlm.msc with normal UAC. Under Trusted People > Certificates, locate the same exact thumbprint and delete only that leaf. Do not change system security settings or other trusted certificates.
 4. Before installing the final Store-distributed product, remove this development installation/trust; the Microsoft distribution signature is separate.
+
+## Source handoff
+
+Branch: chore/store-production-identity-20260917; PR #223 supersedes #222. Initial CI rejected the former build/ branch prefix; the branch was replaced with an accepted chore/ prefix without changing policy, commit history or the validated upload bytes. PR #221 remains an overlapping prerequisite; resolve that integration dependency before merging. Source handoff documentation updates do not regenerate or change the MSIX.
