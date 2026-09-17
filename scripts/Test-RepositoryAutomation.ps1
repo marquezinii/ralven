@@ -74,6 +74,39 @@ New-Item -ItemType Directory -Path $temporaryRoot | Out-Null
 try {
     & (Join-Path $PSScriptRoot 'Test-RepositoryPolicy.ps1') -Workspace $workspace
 
+    $releaseWorkflow = Get-Content -LiteralPath (Join-Path $workspace '.github/workflows/release.yml') -Raw
+    $promotionWorkflow = Get-Content -LiteralPath (Join-Path $workspace '.github/workflows/promote-release.yml') -Raw
+    $ciWorkflow = Get-Content -LiteralPath (Join-Path $workspace '.github/workflows/ci.yml') -Raw
+    foreach ($requiredReleaseInvariant in @(
+        'group: ralven-stable-release',
+        "inputs.mode != 'plan'",
+        "inputs.mode == 'publish'",
+        'Build-Portable.ps1 -Runtime win-x64 -Configuration Release -Harden -SkipArchives'
+    )) {
+        if (-not $releaseWorkflow.Contains($requiredReleaseInvariant, [StringComparison]::Ordinal)) {
+            throw "Release workflow invariant is missing: $requiredReleaseInvariant"
+        }
+    }
+    if ($releaseWorkflow.Contains('inputs.publish', [StringComparison]::Ordinal)) {
+        throw 'Release workflow must not expose the old signing-capable publish boolean as a dry-run.'
+    }
+    foreach ($requiredPromotionInvariant in @(
+        'gh pr checks $env:RELEASE_PR',
+        '--match-head-commit $env:CANDIDATE_SHA',
+        'Test-ReleaseTagTarget.ps1',
+        'uses: ./.github/workflows/release.yml',
+        'Merge published main into dev/proxima-versao'
+    )) {
+        if (-not $promotionWorkflow.Contains($requiredPromotionInvariant, [StringComparison]::Ordinal)) {
+            throw "Stable promotion workflow invariant is missing: $requiredPromotionInvariant"
+        }
+    }
+    $pushTriggerEnd = $ciWorkflow.IndexOf('pull_request:', [StringComparison]::Ordinal)
+    $pushTrigger = $ciWorkflow.Substring(0, $pushTriggerEnd)
+    if ($pushTrigger.Contains('branches: [main', [StringComparison]::Ordinal)) {
+        throw 'Full CI must not repeat after the already-validated release candidate is merged to main.'
+    }
+
     $fixture = Join-Path $temporaryRoot 'policy'
     New-PolicyFixture -Destination $fixture
 

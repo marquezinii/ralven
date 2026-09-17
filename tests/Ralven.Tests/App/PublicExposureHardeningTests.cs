@@ -117,7 +117,7 @@ public sealed class PublicExposureHardeningTests
         var root = FindRepositoryRoot();
         var workflow = File.ReadAllText(Path.Combine(root, ".github", "workflows", "release.yml"));
 
-        var hardenedBuild = workflow.IndexOf("Build-Installer.ps1 -Version $env:ASSET_VERSION -Harden", StringComparison.Ordinal);
+        var hardenedBuild = workflow.IndexOf("Build-Portable.ps1 -Runtime win-x64 -Configuration Release -Harden -SkipArchives", StringComparison.Ordinal);
         var finalizeBroker = workflow.IndexOf("Finalize-BrokerIntegrity.ps1", hardenedBuild, StringComparison.Ordinal);
         var structuralScan = workflow.IndexOf("Test-NoUnobfuscatedAssemblies.ps1", finalizeBroker, StringComparison.Ordinal);
         var runtimeSmoke = workflow.IndexOf("Test-HardenedRuntime.ps1", structuralScan, StringComparison.Ordinal);
