@@ -1772,6 +1772,8 @@
   <data name="Ultra.Change.BackgroundCapture" xml:space="preserve"><value>Cambió la configuración de grabación en segundo plano de Windows.</value></data>
   <data name="Ultra.Change.LowDiskSpace" xml:space="preserve"><value>El espacio libre en la unidad del sistema bajó de 10 GB.</value></data>
   <data name="Ultra.Change.PointerAcceleration" xml:space="preserve"><value>Cambió la configuración de aceleración del puntero de Windows.</value></data>
+  <data name="Ultra.Change.StartupApps" xml:space="preserve"><value>Se agregó o quitó un programa del inicio de Windows.</value></data>
+  <data name="Ultra.Change.GraphicsDriver" xml:space="preserve"><value>Cambió la versión del controlador de video.</value></data>
   <data name="Ultra.Measure.Title" xml:space="preserve"><value>Comparar la misma actividad</value></data>
   <data name="Ultra.Measure.Help" xml:space="preserve"><value>1. Elige una rutina y nombra la tarea. 2. Ejecuta la misma actividad durante 30 muestras (unos 30 segundos). 3. Repite en las mismas condiciones después de revisar tu plan. Los valores muestran uso de recursos, no FPS ni prueba de mejora. No compares reposo con un juego o renderizado.</value></data>
   <data name="Ultra.Measure.Context" xml:space="preserve"><value>Nombre de la tarea (repite el nombre para comparar)</value></data>
@@ -1870,8 +1872,10 @@ Media CPU {3} · GPU {4} · RAM {5} · Disco {6}</value></data>
   <data name="Pro.Error.Request" xml:space="preserve"><value>No se pudo confirmar la solicitud. Actualiza para consultar su estado antes de intentarlo de nuevo. Un cobro o cancelación pendiente no debe considerarse completado.</value></data>
   <data name="Personal.Introduction" xml:space="preserve"><value>Tus rutinas, tus decisiones. Guarda un plan personal, sigue los cambios y compara la misma actividad. Guardar una rutina nunca modifica Windows.</value></data>
   <data name="Personal.Upgrade" xml:space="preserve"><value>Conocer Ralven Pro</value></data>
-  <data name="Personal.History.Count" xml:space="preserve"><value>{0}/30 mediciones · {1}/60 cambios guardados en este PC</value></data>
+  <data name="Personal.History.Count" xml:space="preserve"><value>{0} mediciones · {1} cambios guardados en los últimos 90 días</value></data>
   <data name="Personal.Tracking.Latest" xml:space="preserve"><value>Último cambio registrado: {0} · {1}</value></data>
+  <data name="Personal.Change.Evidence" xml:space="preserve"><value>({0} → {1})</value></data>
+  <data name="Personal.Change.Association" xml:space="preserve"><value>· posiblemente relacionado con un cambio en {0}</value></data>
   <data name="Personal.Tracking.Analyze" xml:space="preserve"><value>Analizar este PC de nuevo</value></data>
   <data name="Personal.Tracking.Review" xml:space="preserve"><value>Revisar mi plan personal</value></data>
   <data name="Personal.Measure.CompareHelp" xml:space="preserve"><value>Elige una medición y una referencia anterior. Solo se comparan actividades, hardware y versiones de Windows equivalentes. Las diferencias son puntos porcentuales, no mejoras de rendimiento.</value></data>

@@ -2,6 +2,7 @@ using Ralven.App.Services;
 using Ralven.App.ViewModels;
 using Ralven.Contracts;
 using Ralven.Core.Planning;
+using Ralven.Windows.Infrastructure;
 using Xunit;
 
 namespace Ralven.Tests.App;
@@ -124,7 +125,7 @@ public sealed class PersonalWorkspaceTests
     }
 
     [Fact]
-    public async Task TrackingIsOptInAndKeepsOnlyTheLatestSixtyChanges()
+    public async Task TrackingIsOptInAndKeepsRecentChangesUpToTheCap()
     {
         var service = new PersonalWorkspaceService(_ => Task.FromResult(true), inMemory: true);
         var reference = Observation;
@@ -137,24 +138,77 @@ public sealed class PersonalWorkspaceTests
                 GameMode = i % 2 == 0 ? WindowsGamingSettingState.Disabled : WindowsGamingSettingState.Enabled
             }, Token);
         var workspace = await service.LoadAsync(Token);
-        Assert.Equal(60, workspace.Changes.Count);
+        Assert.Equal(70, workspace.Changes.Count);
         Assert.Equal(reference, workspace.Reference);
         Assert.All(workspace.Changes, change => Assert.Equal(PcChangeKind.GameMode, change.Kind));
         Assert.Equal(reference.CapturedAt.AddMinutes(70), workspace.LastObservation!.CapturedAt);
     }
 
     [Fact]
+    public async Task ChangesOlderThanNinetyDaysAreDroppedButRecentOnesSurvive()
+    {
+        var service = new PersonalWorkspaceService(_ => Task.FromResult(true), inMemory: true);
+        var reference = Observation;
+        await service.SetTrackingAsync(true, reference, Token);
+        await service.ObserveAsync(reference with
+        {
+            CapturedAt = DateTimeOffset.UtcNow.AddDays(-91),
+            GameMode = WindowsGamingSettingState.Disabled
+        }, Token);
+        await service.ObserveAsync(reference with
+        {
+            CapturedAt = DateTimeOffset.UtcNow.AddDays(-1),
+            GameMode = WindowsGamingSettingState.Enabled
+        }, Token);
+        var workspace = await service.LoadAsync(Token);
+        Assert.Single(workspace.Changes);
+        Assert.True(workspace.Changes[0].CapturedAt >= DateTimeOffset.UtcNow.AddDays(-90));
+    }
+
+    [Fact]
     public void UnavailableSensorsAreNotReportedAsConfigurationChanges()
     {
         var reference = Observation;
-        var changes = PersonalWorkspaceService.DetectChanges(reference, reference with
+        var changes = PersonalTimelineAnalysis.DetectChanges(reference, reference with
         {
             GameMode = WindowsGamingSettingState.Unknown,
             BackgroundCapture = WindowsGamingSettingState.Unavailable,
             FreeDiskGiB = 8
         });
         Assert.Equal([PcChangeKind.LowDiskSpace], changes.Select(change => change.Kind));
-        Assert.Empty(PersonalWorkspaceService.DetectChanges(reference, reference));
+        Assert.Empty(PersonalTimelineAnalysis.DetectChanges(reference, reference));
+    }
+
+    [Fact]
+    public void HardwareChangeCarriesReadableEvidenceInsteadOfTheHash()
+    {
+        var reference = Observation with { HardwareDescription = "Ryzen 5800X · RTX 3070" };
+        var next = reference with { HardwareSignature = new string('b', 64), HardwareDescription = "Ryzen 5800X · RTX 4070" };
+        var change = Assert.Single(PersonalTimelineAnalysis.DetectChanges(reference, next));
+        Assert.Equal(PcChangeKind.Hardware, change.Kind);
+        Assert.Equal("Ryzen 5800X · RTX 3070", change.PreviousValue);
+        Assert.Equal("Ryzen 5800X · RTX 4070", change.CurrentValue);
+    }
+
+    [Fact]
+    public void StartupAppAdditionAndRemovalAreReportedSeparately()
+    {
+        var reference = Observation with { StartupAppNames = ["Discord"] };
+        var next = reference with { StartupAppNames = ["Steam"] };
+        var changes = PersonalTimelineAnalysis.DetectChanges(reference, next);
+        Assert.Contains(changes, change => change.Kind == PcChangeKind.StartupApps && change.PreviousValue == "Discord" && change.CurrentValue is null);
+        Assert.Contains(changes, change => change.Kind == PcChangeKind.StartupApps && change.PreviousValue is null && change.CurrentValue == "Steam");
+    }
+
+    [Fact]
+    public void GraphicsDriverVersionBumpOnTheSameDeviceIsReported()
+    {
+        var reference = Observation with { GraphicsDriverVersions = ["NVIDIA GeForce RTX 3070 31.0.15.3623"] };
+        var next = reference with { GraphicsDriverVersions = ["NVIDIA GeForce RTX 3070 32.0.15.6094"] };
+        var change = Assert.Single(PersonalTimelineAnalysis.DetectChanges(reference, next));
+        Assert.Equal(PcChangeKind.GraphicsDriver, change.Kind);
+        Assert.Equal("31.0.15.3623", change.PreviousValue);
+        Assert.Equal("32.0.15.6094", change.CurrentValue);
     }
 
     [Fact]
@@ -165,8 +219,8 @@ public sealed class PersonalWorkspaceTests
 
         Assert.Equal(
             [PcChangeKind.PointerAcceleration],
-            PersonalWorkspaceService.DetectChanges(disabled, enabled).Select(change => change.Kind));
-        Assert.Empty(PersonalWorkspaceService.DetectChanges(disabled, enabled with { PointerAccelerationEnabled = null }));
+            PersonalTimelineAnalysis.DetectChanges(disabled, enabled).Select(change => change.Kind));
+        Assert.Empty(PersonalTimelineAnalysis.DetectChanges(disabled, enabled with { PointerAccelerationEnabled = null }));
     }
 
     [Fact]
@@ -179,14 +233,47 @@ public sealed class PersonalWorkspaceTests
         Assert.Equal(50d, first.GpuPercent);
         Assert.Null(first.MemoryPercent);
         Assert.Null(first.DiskPercent);
-        Assert.True(PersonalWorkspaceService.CanCompare(first, first with { Context = "same scene", CpuPercent = 90 }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { Usage = PersonalUsage.Work }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { Context = "Other scene" }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { HardwareSignature = new string('b', 64) }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { WindowsVersion = "Other Windows" }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { DurationSeconds = 90 }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { SampleCount = 10 }));
-        Assert.False(PersonalWorkspaceService.CanCompare(first, first with { CpuPercent = null, GpuPercent = null }));
+        Assert.True(PersonalTimelineAnalysis.CanCompare(first, first with { Context = "same scene", CpuPercent = 90 }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { Usage = PersonalUsage.Work }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { Context = "Other scene" }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { HardwareSignature = new string('b', 64) }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { WindowsVersion = "Other Windows" }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { DurationSeconds = 90 }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { SampleCount = 10 }));
+        Assert.False(PersonalTimelineAnalysis.CanCompare(first, first with { CpuPercent = null, GpuPercent = null }));
+    }
+
+    [Fact]
+    public async Task CaptureObservationCollectsStartupAppsAndGraphicsDriverVersion()
+    {
+        var service = new PersonalWorkspaceService(_ => Task.FromResult(true), inMemory: true,
+            applicationInventory: new FakeApplicationInventoryInspector(["Discord", "Steam"]),
+            driverVersion: new FakeDriverVersionInspector("NVIDIA GeForce RTX 3070", "31.0.15.3623"));
+        var diagnostic = new AppDiagnostic
+        {
+            Edition = FiveMEdition.Unknown,
+            IsFiveMRunning = false,
+            GtaVDetected = false,
+            GtaVIsRunning = false,
+            GtaVGraphicsSettingsPath = string.Empty,
+            CpuName = "Test CPU",
+            GpuName = "Test GPU",
+            GpuNames = ["Test GPU"],
+            TotalMemoryGiB = 16,
+            AvailableMemoryGiB = 8,
+            LogicalProcessorCount = 8,
+            FreeDiskGiB = 100,
+            LegacyCacheBytes = 0,
+            OsLabel = "Windows 11",
+            ReadinessScore = 80,
+            RecommendedProfile = OptimizationProfile.Balanced,
+            PerformancePressure = PerformancePressureLevel.Low,
+            StreamingSoftware = new StreamingSoftwareSnapshot([], DateTimeOffset.UtcNow, true, true)
+        };
+        var observation = await service.CaptureObservationAsync(diagnostic, new WindowsGamingControlsService(demoMode: true), Token);
+        Assert.Contains("Discord", observation.StartupAppNames);
+        Assert.Contains("Steam", observation.StartupAppNames);
+        Assert.Contains("NVIDIA GeForce RTX 3070 31.0.15.3623", observation.GraphicsDriverVersions);
     }
 
     [Fact]
@@ -226,7 +313,9 @@ public sealed class PersonalWorkspaceTests
         Assert.False(viewModel.HasRalvenAiAccess);
         viewModel.SetRalvenAiAccess(true);
         Assert.True(viewModel.HasRalvenAiAccess);
-        Assert.False(viewModel.CanStart);
+        // CanStart trusts the UI-reported access; the real boundary is the service call below,
+        // which rejects it because the service's own authorization still returns false.
+        Assert.True(viewModel.CanStart);
         await viewModel.SavePersonalProfileAsync();
         Assert.False(viewModel.HasProAccess);
         Assert.False(viewModel.HasRalvenAiAccess);
@@ -274,4 +363,20 @@ public sealed class PersonalWorkspaceTests
         await Assert.ThrowsAsync<ProAccessRequiredException>(() => service.ExecuteAsync(plan, new Progress<AppProgressUpdate>(), Token));
         Assert.Equal(1, calls);
     }
+}
+
+file sealed class FakeApplicationInventoryInspector(IReadOnlyList<string> startupNames) : IWindowsApplicationInventoryInspector
+{
+    public Task<WindowsApplicationInventorySnapshot> InspectAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new WindowsApplicationInventorySnapshot([], [], DateTimeOffset.UtcNow, true, true));
+
+    public Task<WindowsApplicationInventorySnapshot> InspectStartupAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new WindowsApplicationInventorySnapshot([], startupNames.Select(name =>
+            new WindowsStartupItem(name, @"C:\Startup", WindowsStartupItemSource.StartupFolder, WindowsApplicationScope.CurrentUser)).ToArray(),
+            DateTimeOffset.UtcNow, true, true));
+}
+
+file sealed class FakeDriverVersionInspector(string deviceName, string version) : IDriverVersionInspector
+{
+    public DriverVersionSnapshot GetSnapshot() => new([new(deviceName, version)], [], [], [], [], [], []);
 }

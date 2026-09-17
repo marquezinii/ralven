@@ -7,7 +7,7 @@
 
 - **Produto:** Ralven, plataforma de gerenciamento e otimização do Windows com IA, transparente, reversível e orientada por diagnóstico. FiveM para **GTAV Legacy** é a integração especializada atual da área de Jogos.
 - **Integração:** `dev/proxima-versao` é a branch de integração da próxima versão; `main` representa a linha pública/estável. O fluxo de branches, worktrees, Pull Requests, integração e release é definido em `AI_RULES.md`.
-- **Último estado consolidado:** 14/09/2026: comunicação elevada do broker corrigida, anúncios de release do Discord reorganizados, analyzer atualizado e infraestrutura segura de vínculo entre conta Ralven e cargos de plano preparada para ativação posterior. Pro, Ralven AI e o vínculo Discord continuam bloqueados enquanto suas dependências operacionais não estiverem configuradas. Confirme o estado real com Git e testes atuais antes de trabalhar.
+- **Último estado consolidado:** 16/09/2026: `ProFeatureAvailability.Enabled` passou para `true` em `dev/proxima-versao` — o Pro (Ultra e a linha do tempo de mudanças pessoais, enriquecida com evidência antes/depois e associação de sintomas) está destravado no cliente. Checkout continua fail-closed: depende de `CheckoutAvailable` vindo do servidor, e a cobrança Asaas segue desativada (`ASAAS_BILLING_ENABLED = "false"`), então esta mudança não habilita cobrança por si só. Ralven AI e o vínculo Discord continuam bloqueados enquanto suas dependências operacionais não estiverem configuradas. Confirme o estado real com Git e testes atuais antes de trabalhar.
 - **Release pública atual:** `v1.7.1`, publicada a partir de `main`. A próxima versão só é definida no fluxo oficial de release a partir das mudanças posteriores a essa tag.
 - **Atalho de desenvolvimento:** `Ralven - Desenvolvimento` usa `scripts\Start-DevelopmentApp.ps1`. Conforme `AI_RULES.md`, deve ser reconstruído com `scripts\Install-DevelopmentShortcut.ps1 -Build` quando aplicável. O script espelha a árvore para a pasta irmã fixa `Ralven-dev-shortcut`, sem ficar órfão após a remoção de um worktree.
 
@@ -72,7 +72,7 @@ Preferências, journals, solicitações efêmeras, filas e logs locais ficam sob
 - Aplicativos instala, atualiza e desinstala somente pacotes identificados das origens `winget` e `msstore`; inventário e inicialização permanecem leituras que nunca executam `UninstallString`.
 - Jogos abre o hub FiveM/GTAV Legacy, com otimizador especializado, histórico, monitor local e acesso ao download oficial do ReShade. GTAV Enhanced continua bloqueado.
 - O Otimizador compartilha a trilha Preparar → Executar → Resultado entre `GeneralWindows` e `FiveMLegacy`; detalhes técnicos expõem risco, acesso, verificação e rollback. Cache/reparo continua opt-in e fora dos perfis padrão.
-- Ralven Pro e Ralven AI permanecem visíveis, localizados e bloqueados como recursos em desenvolvimento. Não há compra, ativação, cobrança ou chamada ao modelo enquanto as flags continuarem desativadas.
+- Ralven Pro está destravado no cliente (Ultra e a linha do tempo de mudanças pessoais); checkout permanece indisponível enquanto o servidor reportar `CheckoutAvailable: false`. Ralven AI permanece visível, localizado e bloqueado como recurso em desenvolvimento; não há chamada ao modelo enquanto sua flag continuar desativada.
 - Notas da Versão aparecem após update quando existe versão ainda não vista. Avisos ao vivo vêm de `GET /live-alert` e podem ser dispensados até o próximo ID.
 - `MainWindow` e `MainViewModel` são `partial class` por responsabilidade; edite o arquivo parcial da área correspondente.
 

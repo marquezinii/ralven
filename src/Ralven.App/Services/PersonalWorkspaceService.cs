@@ -10,40 +10,22 @@ namespace Ralven.App.Services;
 
 internal sealed class ProAccessRequiredException(string message) : UnauthorizedAccessException(message);
 
-public enum PcChangeKind { Hardware, Windows, GameMode, BackgroundCapture, LowDiskSpace, PointerAcceleration }
-
-public sealed record PcObservation(
-    DateTimeOffset CapturedAt, string HardwareSignature, string WindowsVersion,
-    double FreeDiskGiB, WindowsGamingSettingState GameMode, WindowsGamingSettingState BackgroundCapture)
-{
-    public bool? PointerAccelerationEnabled { get; init; }
-}
-
-public sealed record PcChange(DateTimeOffset CapturedAt, PcChangeKind Kind);
-
-public sealed record PersonalMeasurement(
-    DateTimeOffset CapturedAt, PersonalUsage Usage, string Context, string HardwareSignature,
-    string WindowsVersion, int SampleCount, double DurationSeconds,
-    double? CpuPercent, double? GpuPercent, double? MemoryPercent, double? DiskPercent);
-
-public sealed record PersonalWorkspace
-{
-    public int SchemaVersion { get; init; } = 1;
-    public IReadOnlyList<PersonalOptimizationPreferencesDto> Profiles { get; init; } = [];
-    public bool TrackingEnabled { get; init; }
-    public PcObservation? Reference { get; init; }
-    public PcObservation? LastObservation { get; init; }
-    public IReadOnlyList<PcChange> Changes { get; init; } = [];
-    public IReadOnlyList<PersonalMeasurement> Measurements { get; init; } = [];
-}
-
 /// <summary>Local, bounded Pro data. Reading existing records and opting out never require a subscription.</summary>
 public sealed class PersonalWorkspaceService
 {
+    private const int MaxChanges = 500;
+    private const int MaxMeasurements = 120;
+    private const int RetentionDays = 90;
+    private const int MaxEvidenceLength = 200;
+    private const int MaxStartupItems = 50;
+    private const int MaxDriverEntries = 20;
+
     private readonly string directory;
     private readonly Func<CancellationToken, Task<bool>> authorizePro;
     private readonly ILocalizationService localization;
     private readonly IMouseAccelerationInspector mouseAcceleration;
+    private readonly IWindowsApplicationInventoryInspector applicationInventory;
+    private readonly IDriverVersionInspector driverVersion;
     private readonly bool inMemory;
     private readonly SemaphoreSlim gate = new(1, 1);
     private PersonalWorkspace memory = new();
@@ -54,7 +36,9 @@ public sealed class PersonalWorkspaceService
         bool inMemory = false,
         string? directory = null,
         ILocalizationService? localization = null,
-        IMouseAccelerationInspector? mouseAcceleration = null)
+        IMouseAccelerationInspector? mouseAcceleration = null,
+        IWindowsApplicationInventoryInspector? applicationInventory = null,
+        IDriverVersionInspector? driverVersion = null)
     {
         this.authorizePro = authorizePro;
         this.inMemory = inMemory;
@@ -62,6 +46,8 @@ public sealed class PersonalWorkspaceService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ProductIdentity.Name, "Personal"));
         this.localization = localization ?? LocalizationService.Current;
         this.mouseAcceleration = mouseAcceleration ?? new WindowsMouseAccelerationInspector();
+        this.applicationInventory = applicationInventory ?? new WindowsApplicationInventoryInspector();
+        this.driverVersion = driverVersion ?? new WindowsDriverVersionInspector();
     }
 
     public async Task RequireProAsync(CancellationToken cancellationToken = default)
@@ -84,15 +70,25 @@ public sealed class PersonalWorkspaceService
             var gaming = await gamingControls.ReadAsync(cancellationToken).ConfigureAwait(false);
             var mouse = mouseAcceleration.GetSnapshot();
             var drive = new DriveInfo(Path.GetPathRoot(Environment.SystemDirectory)!);
+            var startup = await applicationInventory.InspectStartupAsync(cancellationToken).ConfigureAwait(false);
+            var drivers = driverVersion.GetSnapshot();
             return new PcObservation(DateTimeOffset.UtcNow,
                 HardwareProfileSignature.Compute(current.CpuName, current.GpuNames, current.TotalMemoryGiB),
                 current.OsLabel, drive.AvailableFreeSpace / 1024d / 1024 / 1024, gaming.GameMode, gaming.BackgroundCapture)
             {
                 PointerAccelerationEnabled = mouse.State == MouseAccelerationInspectionState.Available
                     ? mouse.AccelerationLevel > 0
-                    : null
+                    : null,
+                HardwareDescription = TrimTo($"{current.CpuName} · {string.Join(", ", current.GpuNames)}"),
+                StartupAppNames = startup.StartupItems.Select(item => TrimTo(item.Name))
+                    .Distinct(StringComparer.OrdinalIgnoreCase).Take(MaxStartupItems).ToArray(),
+                GraphicsDriverVersions = drivers.Video.Select(item => TrimTo($"{item.DeviceName} {item.DriverVersion}"))
+                    .Take(MaxDriverEntries).ToArray()
             };
         }, cancellationToken);
+
+    private static string TrimTo(string value, int maxLength = MaxEvidenceLength) =>
+        value.Length <= maxLength ? value : value[..maxLength];
 
     public async Task<PersonalWorkspace> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -157,7 +153,8 @@ public sealed class PersonalWorkspaceService
         return ChangeAsync(state => !state.TrackingEnabled ? state : state with
         {
             LastObservation = observation,
-            Changes = state.Changes.Concat(DetectChanges(state.LastObservation, observation)).TakeLast(60).ToArray()
+            Changes = TrimByAge(state.Changes.Concat(PersonalTimelineAnalysis.DetectChanges(state.LastObservation, observation)),
+                change => change.CapturedAt, MaxChanges)
         }, true, cancellationToken);
     }
 
@@ -187,8 +184,15 @@ public sealed class PersonalWorkspaceService
         // Expiry must not discard a completed measurement or interrupt a write.
         return await ChangeAsync(state => state with
         {
-            Measurements = state.Measurements.Append(measurement).TakeLast(30).ToArray()
+            Measurements = TrimByAge(state.Measurements.Append(measurement), item => item.CapturedAt, MaxMeasurements)
         }, false, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Keeps entries from the last <see cref="RetentionDays"/> days, capped at <paramref name="maxCount"/> as a safeguard.</summary>
+    private static IReadOnlyList<T> TrimByAge<T>(IEnumerable<T> items, Func<T, DateTimeOffset> capturedAt, int maxCount)
+    {
+        var cutoff = DateTimeOffset.UtcNow.AddDays(-RetentionDays);
+        return items.Where(item => capturedAt(item) >= cutoff).TakeLast(maxCount).ToArray();
     }
 
     internal static PersonalMeasurement Summarize(
@@ -205,38 +209,6 @@ public sealed class PersonalWorkspaceService
         var available = values.Where(value => value is >= 0 and <= 100).Select(value => value!.Value).ToArray();
         return available.Length >= Math.Max(1, (int)Math.Ceiling(values.Length * 0.8)) ? available.Average() : null;
     }
-
-    public static bool CanCompare(PersonalMeasurement first, PersonalMeasurement second) =>
-        first.Usage == second.Usage
-        && string.Equals(first.Context, second.Context, StringComparison.OrdinalIgnoreCase)
-        && first.HardwareSignature == second.HardwareSignature
-        && first.WindowsVersion == second.WindowsVersion
-        && first.SampleCount == 30 && second.SampleCount == 30
-        && first.DurationSeconds is >= 29 and <= 45 && second.DurationSeconds is >= 29 and <= 45
-        && ((first.CpuPercent.HasValue && second.CpuPercent.HasValue)
-            || (first.GpuPercent.HasValue && second.GpuPercent.HasValue)
-            || (first.MemoryPercent.HasValue && second.MemoryPercent.HasValue)
-            || (first.DiskPercent.HasValue && second.DiskPercent.HasValue));
-
-    internal static IReadOnlyList<PcChange> DetectChanges(PcObservation? previous, PcObservation current)
-    {
-        if (previous is null) return [];
-        var result = new List<PcChange>();
-        if (previous.HardwareSignature != current.HardwareSignature) result.Add(new(current.CapturedAt, PcChangeKind.Hardware));
-        if (previous.WindowsVersion != current.WindowsVersion) result.Add(new(current.CapturedAt, PcChangeKind.Windows));
-        if (Known(previous.GameMode) && Known(current.GameMode) && previous.GameMode != current.GameMode)
-            result.Add(new(current.CapturedAt, PcChangeKind.GameMode));
-        if (Known(previous.BackgroundCapture) && Known(current.BackgroundCapture) && previous.BackgroundCapture != current.BackgroundCapture)
-            result.Add(new(current.CapturedAt, PcChangeKind.BackgroundCapture));
-        if (previous.FreeDiskGiB >= 10 && current.FreeDiskGiB < 10) result.Add(new(current.CapturedAt, PcChangeKind.LowDiskSpace));
-        if (previous.PointerAccelerationEnabled.HasValue && current.PointerAccelerationEnabled.HasValue
-            && previous.PointerAccelerationEnabled != current.PointerAccelerationEnabled)
-            result.Add(new(current.CapturedAt, PcChangeKind.PointerAcceleration));
-        return result;
-    }
-
-    private static bool Known(WindowsGamingSettingState state) => state is
-        WindowsGamingSettingState.Enabled or WindowsGamingSettingState.Disabled or WindowsGamingSettingState.NotConfigured;
 
     private async Task<PersonalWorkspace> ChangeAsync(
         Func<PersonalWorkspace, PersonalWorkspace> update, bool requiresPro, CancellationToken cancellationToken)
@@ -298,8 +270,9 @@ public sealed class PersonalWorkspaceService
     {
         if (state.SchemaVersion != 1 || state.Profiles is null || state.Profiles.Count > 4
             || state.Profiles.Any(item => item is null) || state.Profiles.Select(item => item.Usage).Distinct().Count() != state.Profiles.Count
-            || state.Changes is null || state.Changes.Count > 60 || state.Changes.Any(item => item is null || !Enum.IsDefined(item.Kind))
-            || state.Measurements is null || state.Measurements.Count > 30
+            || state.Changes is null || state.Changes.Count > MaxChanges || state.Changes.Any(item => item is null || !Enum.IsDefined(item.Kind)
+                || (item.PreviousValue?.Length ?? 0) > MaxEvidenceLength || (item.CurrentValue?.Length ?? 0) > MaxEvidenceLength)
+            || state.Measurements is null || state.Measurements.Count > MaxMeasurements
             || state.Measurements.Any(item => item is null || !Enum.IsDefined(item.Usage)
                 || string.IsNullOrWhiteSpace(item.Context) || item.Context.Length > 80
                 || item.HardwareSignature is not { Length: 64 } || item.WindowsVersion is not { Length: > 0 and <= 200 }
@@ -319,7 +292,12 @@ public sealed class PersonalWorkspaceService
     {
         if (observation.HardwareSignature is not { Length: 64 } || observation.WindowsVersion is not { Length: > 0 and <= 200 }
             || !double.IsFinite(observation.FreeDiskGiB) || observation.FreeDiskGiB < 0
-            || !Enum.IsDefined(observation.GameMode) || !Enum.IsDefined(observation.BackgroundCapture))
+            || !Enum.IsDefined(observation.GameMode) || !Enum.IsDefined(observation.BackgroundCapture)
+            || observation.HardwareDescription.Length > MaxEvidenceLength
+            || observation.StartupAppNames is null || observation.StartupAppNames.Count > MaxStartupItems
+            || observation.StartupAppNames.Any(item => item is null || item.Length > MaxEvidenceLength)
+            || observation.GraphicsDriverVersions is null || observation.GraphicsDriverVersions.Count > MaxDriverEntries
+            || observation.GraphicsDriverVersions.Any(item => item is null || item.Length > MaxEvidenceLength))
             throw new InvalidDataException("The PC observation is incomplete.");
     }
 }

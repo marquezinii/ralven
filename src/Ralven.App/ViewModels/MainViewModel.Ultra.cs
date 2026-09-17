@@ -58,7 +58,7 @@ public sealed partial class MainViewModel
     }
 
     private int FindBaseline(int selected) => selected < 0 ? -1 :
-        Enumerable.Range(0, selected).LastOrDefault(index => PersonalWorkspaceService.CanCompare(
+        Enumerable.Range(0, selected).LastOrDefault(index => PersonalTimelineAnalysis.CanCompare(
             personalWorkspace.Measurements[index], personalWorkspace.Measurements[selected]), -1);
 
     public Task<string> ExportPersonalWorkspaceAsync(CancellationToken cancellationToken = default) =>
@@ -152,7 +152,7 @@ public sealed partial class MainViewModel
             if (baselineMeasurementIndex < 0 || baselineMeasurementIndex >= selectedMeasurementIndex)
                 return localization.GetString("Ultra.Measure.NeedMatch");
             var previous = personalWorkspace.Measurements[baselineMeasurementIndex];
-            if (!PersonalWorkspaceService.CanCompare(previous, latest)) return localization.GetString("Ultra.Measure.NeedMatch");
+            if (!PersonalTimelineAnalysis.CanCompare(previous, latest)) return localization.GetString("Ultra.Measure.NeedMatch");
             return localization.Format("Ultra.Measure.Difference",
                 previous.CapturedAt.ToLocalTime().ToString("g", localization.CurrentCulture),
                 latest.CapturedAt.ToLocalTime().ToString("g", localization.CurrentCulture),
@@ -328,7 +328,7 @@ public sealed partial class MainViewModel
         var current = personalWorkspace.Measurements[selectedMeasurementIndex];
         var baseline = baselineMeasurementIndex >= 0 && baselineMeasurementIndex < selectedMeasurementIndex
             ? personalWorkspace.Measurements[baselineMeasurementIndex] : null;
-        if (baseline is not null && !PersonalWorkspaceService.CanCompare(baseline, current)) baseline = null;
+        if (baseline is not null && !PersonalTimelineAnalysis.CanCompare(baseline, current)) baseline = null;
         void Add(string name, double? before, double? after) => PersonalMetricRows.Add(new(
             localization.GetString(name), Metric(after), Metric(before), before.HasValue && after.HasValue
                 ? localization.Format("Personal.Measure.Delta", Difference(before, after))
@@ -365,9 +365,20 @@ public sealed partial class MainViewModel
         refreshingUltra = false;
         RefreshPersonalComparison();
         PersonalChanges.Clear();
+        var associations = PersonalTimelineAnalysis.FindAssociations(personalWorkspace.Changes, personalWorkspace.Measurements)
+            .ToDictionary(association => association.Change);
         foreach (var change in personalWorkspace.Changes.Reverse())
-            PersonalChanges.Add(change.CapturedAt.ToLocalTime().ToString("g", localization.CurrentCulture)
-                + " · " + localization.GetString($"Ultra.Change.{change.Kind}"));
+        {
+            var line = change.CapturedAt.ToLocalTime().ToString("g", localization.CurrentCulture)
+                + " · " + localization.GetString($"Ultra.Change.{change.Kind}");
+            if (change.PreviousValue is not null || change.CurrentValue is not null)
+                line += " " + localization.Format("Personal.Change.Evidence",
+                    change.PreviousValue ?? localization.GetString("Ultra.Unavailable"),
+                    change.CurrentValue ?? localization.GetString("Ultra.Unavailable"));
+            if (associations.TryGetValue(change, out var association) && association.SymptomSummary is not null)
+                line += " " + localization.Format("Personal.Change.Association", association.SymptomSummary);
+            PersonalChanges.Add(line);
+        }
         if (PersonalChanges.Count == 0) PersonalChanges.Add(localization.GetString("Ultra.Tracking.NoChanges"));
         PersonalMeasurements.Clear();
         foreach (var measurement in personalWorkspace.Measurements.Reverse())

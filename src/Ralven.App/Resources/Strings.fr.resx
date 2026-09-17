@@ -1687,6 +1687,8 @@
   <data name="Ultra.Change.BackgroundCapture" xml:space="preserve"><value>Le paramètre d'enregistrement en arrière-plan Windows a été modifié.</value></data>
   <data name="Ultra.Change.LowDiskSpace" xml:space="preserve"><value>L'espace libre sur le lecteur système est tombé en dessous de 10 Go.</value></data>
   <data name="Ultra.Change.PointerAcceleration" xml:space="preserve"><value>Le paramètre d'accélération du pointeur Windows a été modifié.</value></data>
+  <data name="Ultra.Change.StartupApps" xml:space="preserve"><value>Un programme a été ajouté ou retiré du démarrage de Windows.</value></data>
+  <data name="Ultra.Change.GraphicsDriver" xml:space="preserve"><value>La version du pilote graphique a changé.</value></data>
   <data name="Ultra.Measure.Title" xml:space="preserve"><value>Comparez la même activité</value></data>
   <data name="Ultra.Measure.Help" xml:space="preserve"><value>1. Choisissez une routine et nommez la tâche. 2. Exécutez la même activité tout en collectant 30 échantillons (environ 30 secondes). 3. Répétez dans les mêmes conditions après avoir examiné votre plan. Les valeurs montrent l'utilisation des ressources, et non les FPS ou la preuve du gain de performances. Ne comparez pas le temps d'inactivité avec un jeu ou un rendu.</value></data>
   <data name="Ultra.Measure.Context" xml:space="preserve"><value>Nom de la tâche (utilisez le même nom pour comparer)</value></data>
@@ -1785,7 +1787,9 @@ CPU moyen {3} · GPU {4} · RAM {5} · Disque {6}</value></data>
   <data name="Pro.Error.Request" xml:space="preserve"><value>La demande n'a pas pu être confirmée. Actualisez pour vérifier son état avant de réessayer. Un frais ou une annulation en attente ne doit pas être considéré comme complet.</value></data>
   <data name="Personal.Introduction" xml:space="preserve"><value>Vos routines, vos choix. Enregistrez un plan personnel, suivez les modifications et comparez la même activité. L'enregistrement d'une routine ne change jamais Windows.</value></data>
   <data name="Personal.Upgrade" xml:space="preserve"><value>Explorez Ralven Pro</value></data>
-  <data name="Personal.History.Count" xml:space="preserve"><value>{0}/30 mesures · {1}/60 modifications enregistrées sur ce PC</value></data>
+  <data name="Personal.History.Count" xml:space="preserve"><value>{0} mesures · {1} modifications enregistrées au cours des 90 derniers jours</value></data>
+  <data name="Personal.Change.Evidence" xml:space="preserve"><value>({0} → {1})</value></data>
+  <data name="Personal.Change.Association" xml:space="preserve"><value>· peut-être lié à un changement dans {0}</value></data>
   <data name="Personal.Tracking.Latest" xml:space="preserve"><value>Dernière modification enregistrée : {0} · {1}</value></data>
   <data name="Personal.Tracking.Analyze" xml:space="preserve"><value>Analysez à nouveau ce PC</value></data>
   <data name="Personal.Tracking.Review" xml:space="preserve"><value>Examiner mon plan personnel</value></data>
