@@ -1,7 +1,7 @@
 import { requireFirebaseUser } from './auth/firebaseIdToken.js';
 import { fetchAccountEntitlements } from './billing/entitlements.js';
 import { withinRequiredRateLimit } from './rateLimit.js';
-import { hasExactJsonContentType, readBoundedJson } from './requestSecurity.js';
+import { hasExactJsonContentType, hasExactKeys, isPlainObject, jsonResponse as json, readBoundedJson } from './requestSecurity.js';
 
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_PROVIDER_BODY_BYTES = 64 * 1024;
@@ -23,23 +23,6 @@ const TOOL_NAMES = new Set([
 ]);
 const ROLES = new Set(['user', 'assistant']);
 const REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-function isPlainObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function hasExactKeys(value, keys) {
-  if (!isPlainObject(value)) return false;
-  const actual = Object.keys(value);
-  return actual.length === keys.length && keys.every(key => Object.hasOwn(value, key));
-}
 
 function boundedText(value, maximum, pattern = null) {
   return typeof value === 'string'

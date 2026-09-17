@@ -1,4 +1,4 @@
-import { readBoundedJson } from '../requestSecurity.js';
+import { jsonResponse as json, readBoundedJson } from '../requestSecurity.js';
 import { asaasApi, BILLING_PROVIDER, BillingError, cents, eventKey, monthlyPeriodEnd,
   providerDate, PROVIDER_ID } from './asaasApi.js';
 
@@ -18,10 +18,6 @@ const PAYMENT_RECHECK_INTERVAL_MS = 15 * 60 * 1000;
 const HISTORICAL_RECHECK_INTERVAL_MS = 30 * DAY_MS;
 // ponytail: ten details plus one list cap at 21 calls; queue reconciliation if a checkout legitimately exceeds that budget.
 const MAX_PAYMENT_RECONCILIATIONS = 10;
-
-function json(body, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-}
 
 async function sameSecret(actual, expected) {
   if (typeof actual !== 'string' || typeof expected !== 'string') return false;

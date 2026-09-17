@@ -9,7 +9,7 @@ export const MAX_LIVE_ALERT_MESSAGE_LENGTH = 300;
 export const LIVE_ALERT_SEVERITIES = new Set(['info', 'important', 'critical']);
 
 export function validateLiveAlertUpdate(payload) {
-  if (typeof payload !== 'object' || payload === null) {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
     return null;
   }
 

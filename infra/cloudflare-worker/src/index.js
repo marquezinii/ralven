@@ -40,7 +40,7 @@ import { rateLimitKey, withinRateLimit, withinRequiredRateLimit } from './rateLi
 import * as queries from './stats/queries.js';
 import { toCsv } from './stats/csv.js';
 import { buildCorsHeaders, isAllowedDashboardOrigin, withCorsHeaders } from './cors.js';
-import { hasExactJsonContentType, readBoundedJson } from './requestSecurity.js';
+import { hasExactJsonContentType, hasExactKeys, hasJsonContentType, isPlainObject, jsonResponse, readBoundedJson } from './requestSecurity.js';
 import { createCsrfToken, isValidCsrfToken } from './auth/crypto.js';
 import { validateLiveAlertUpdate } from './liveAlert/validateSubmission.js';
 import { buildLiveAlertUpsert, toLiveAlertResponse } from './liveAlert/store.js';
@@ -136,10 +136,18 @@ const STATS_BUILDERS = {
 // Control is deliberately not set here: withCorsHeaders already defaults it
 // to 'no-store' on every response the fetch handler returns, so repeating it
 // per route would just be the same value twice.
-function jsonResponse(body, status = 200, extraHeaders = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
+// A failed read never distinguishes which query broke: the message is the same
+// for every stats route, so it stays a single constant.
+const DB_QUERY_FAILED = 'Database query failed';
+
+/** CSV download shape shared by the stats and bug-report exports. */
+function csvResponse(rows, filename) {
+  return new Response(toCsv(rows), {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename.replace(/[^a-zA-Z0-9_-]/g, '_')}.csv"`,
+    },
   });
 }
 
@@ -461,8 +469,7 @@ async function handleRecoveryCodesCreate(request, env) {
   if (!hasExactJsonContentType(request)) return jsonResponse({ error: 'invalid-content-type' }, 415);
   const payload = await readBoundedJson(request, MAX_ACCOUNT_SECURITY_BODY_BYTES);
   const enrollmentId = validateEnrollmentId(payload?.mfaEnrollmentId);
-  if (enrollmentId === null || !payload || typeof payload !== 'object' || Array.isArray(payload)
-    || Object.keys(payload).length !== 1) {
+  if (enrollmentId === null || !isPlainObject(payload) || Object.keys(payload).length !== 1) {
     return jsonResponse({ error: 'invalid-request' }, 400);
   }
 
@@ -490,8 +497,7 @@ async function handleRecoveryCodesDelete(request, env) {
   if (!hasExactJsonContentType(request)) return jsonResponse({ error: 'invalid-content-type' }, 415);
   const payload = await readBoundedJson(request, MAX_ACCOUNT_SECURITY_BODY_BYTES);
   const enrollmentId = validateEnrollmentId(payload?.mfaEnrollmentId);
-  if (enrollmentId === null || !payload || typeof payload !== 'object' || Array.isArray(payload)
-    || Object.keys(payload).length !== 1) {
+  if (enrollmentId === null || !isPlainObject(payload) || Object.keys(payload).length !== 1) {
     return jsonResponse({ error: 'invalid-request' }, 400);
   }
   try {
@@ -577,7 +583,7 @@ async function handleDiscordLinkCodeCreate(request, env) {
   if (!auth.authorized) return auth.response;
   if (!hasExactJsonContentType(request)) return jsonResponse({ error: 'invalid-content-type' }, 415);
   const payload = await readBoundedJson(request, 128);
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload) || Object.keys(payload).length !== 0) {
+  if (!hasExactKeys(payload, [])) {
     return jsonResponse({ error: 'invalid-request' }, 400);
   }
   try {
@@ -595,8 +601,7 @@ async function handleDiscordLinkRedeem(request, env) {
   }
   if (!hasExactJsonContentType(request)) return jsonResponse({ error: 'invalid-content-type' }, 415);
   const payload = await readBoundedJson(request, 256);
-  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
-    || Object.keys(payload).sort().join(',') !== 'code,discordUserId') {
+  if (!hasExactKeys(payload, ['code', 'discordUserId'])) {
     return jsonResponse({ error: 'invalid-request' }, 400);
   }
   try {
@@ -634,11 +639,11 @@ async function handleAccountBilling(request, env, path) {
     if (!await withinRequiredRateLimit(env.BILLING_WRITE_LIMITER, `billing:${auth.uid}`)) {
       return jsonResponse({ error: 'billing-rate-limited' }, 429);
     }
-    if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(request.headers.get('Content-Type') ?? '')) {
+    if (!hasJsonContentType(request)) {
       return jsonResponse({ error: 'invalid-content-type' }, 415);
     }
     const payload = await readBoundedJson(request, 1024);
-    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return jsonResponse({ error: 'invalid-request' }, 400);
+    if (!isPlainObject(payload)) return jsonResponse({ error: 'invalid-request' }, 400);
     if (path.endsWith('/checkout')) return jsonResponse(await createAccountCheckout(env, auth, payload));
     if (Object.keys(payload).length !== 0) return jsonResponse({ error: 'invalid-request' }, 400);
     return jsonResponse(await cancelAccountBilling(env, auth));
@@ -658,8 +663,8 @@ async function handleUpdaterEventsList(request, env, url) {
   try {
     const { results } = await env.TELEMETRY_DB.prepare(sql).bind(...params).all();
     return jsonResponse(results.map((event) => ({ ...event, ...describeUpdaterEventCode(event.error_code) })));
-  } catch (err) {
-    return jsonResponse({ error: 'Database query failed' }, 500);
+  } catch {
+    return jsonResponse({ error: DB_QUERY_FAILED }, 500);
   }
 }
 
@@ -773,17 +778,11 @@ async function handleStatsRequest(request, env, url) {
   try {
     const { results } = await env.TELEMETRY_DB.prepare(sql).bind(...params).all();
     if (asCsv) {
-      return new Response(toCsv(results), {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${name.replace(/[^a-zA-Z0-9_-]/g, '_')}.csv"`,
-        },
-      });
+      return csvResponse(results, name);
     }
     return jsonResponse(results);
-  } catch (err) {
-    return jsonResponse({ error: 'Database query failed' }, 500);
+  } catch {
+    return jsonResponse({ error: DB_QUERY_FAILED }, 500);
   }
 }
 
@@ -847,15 +846,10 @@ async function handleBugReportsList(request, env, url) {
   try {
     const { results } = await env.TELEMETRY_DB.prepare(sql).bind(...params).all();
     if (url.pathname.endsWith('.csv')) {
-      return new Response(toCsv(results), {
-        headers: {
-          'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': 'attachment; filename="bug_reports.csv"',
-        },
-      });
+      return csvResponse(results, 'bug_reports');
     }
     return jsonResponse(results);
-  } catch (err) {
-    return jsonResponse({ error: 'Database query failed' }, 500);
+  } catch {
+    return jsonResponse({ error: DB_QUERY_FAILED }, 500);
   }
 }

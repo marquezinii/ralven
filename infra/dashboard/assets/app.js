@@ -283,6 +283,9 @@ async function main() {
     feeds.set('updaterEvents', updaterEvents.data, Boolean(updaterEvents.error));
     byId('csv-bug-reports').href = buildBugsCsvUrl(API_BASE, filters);
     byId('csv-recent-failures').href = buildCsvUrl(API_BASE, 'recent-failures', filters);
+    // Tabela, nao grafico: renderChart nunca chega neste link, entao ele
+    // ficava sem href e o controle CSV aparecia como texto inerte.
+    byId('csv-reliability-by-version').href = buildCsvUrl(API_BASE, 'reliability-by-version', filters);
 
     CHARTS.forEach((definition) => renderChart(definition, results[definition.name], filters));
     renderHealthSignals(results, bugs);
@@ -329,7 +332,7 @@ function renderSummary(results, bugReportsResult) {
   setText('tile-total-accounts', metricText(results['account-summary'], number.format(Number(account.total_accounts) || 0)));
   setText('tile-new-accounts', metricText(results['account-summary'], `${number.format(Number(account.new_accounts) || 0)} novas no período`));
   setText('tile-ai-active', metricText(results['ai-summary'], number.format(Number(ai.active_accounts) || 0)));
-  setText('tile-active-subscriptions', metricText(results['billing-subscriptions'], number.format(sumRows(subscriptions.filter((row) => row.state === 'authorized'), 'subscriptions'))));
+  setText('tile-active-subscriptions', metricText(results['billing-subscriptions'], number.format(sumBy(subscriptions.filter((row) => row.state === 'authorized'), 'subscriptions'))));
   setText('tile-net-revenue', metricText(results['billing-payments'], brl.format((Number(billing.net_revenue_cents) || 0) / 100)));
   setText('metric-ai-requests', metricText(results['ai-summary'], number.format(aiRequests)));
   setText('metric-ai-success', metricText(results['ai-summary'], aiRequests ? formatPercent((aiCompleted / aiRequests) * 100) : '—'));
@@ -769,10 +772,6 @@ function formatDate(value) {
 
 function display(value) {
   return value === null || value === undefined || value === '' ? '—' : String(value);
-}
-
-function sumRows(rows, key) {
-  return rows.reduce((total, row) => total + (Number(row[key]) || 0), 0);
 }
 
 function emptyRow(colspan, title, description = '') {

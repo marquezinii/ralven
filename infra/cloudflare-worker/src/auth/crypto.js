@@ -26,7 +26,7 @@ function fromBase64(value) {
   return Uint8Array.from(atob(value), (character) => character.charCodeAt(0));
 }
 
-function toBase64Url(bytes) {
+export function toBase64Url(bytes) {
   return toBase64(bytes).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
 }
 

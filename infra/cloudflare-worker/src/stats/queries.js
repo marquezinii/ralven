@@ -17,7 +17,7 @@ import { appendEnvironmentClause, appendDateRangeClauses } from '../filters.js';
 const DEFAULT_TOP_N = 10;
 const OPTIMIZATION_OUTCOMES = "event_name IN ('optimization-completed', 'optimization-failed', 'optimization-cancelled')";
 
-function buildFilters({ from, to, appVersion, environment = 'Production' } = {}) {
+function buildFilters({ from, to, appVersion, environment = 'Production' } = {}, versionColumn = 'app_version') {
   const clauses = [];
   const params = [];
 
@@ -30,7 +30,7 @@ function buildFilters({ from, to, appVersion, environment = 'Production' } = {})
   appendDateRangeClauses(clauses, params, { from, to });
 
   if (appVersion) {
-    clauses.push('app_version = ?');
+    clauses.push(`${versionColumn} = ?`);
     params.push(appVersion);
   }
 
@@ -44,17 +44,8 @@ function buildDateFilters(filters = {}, column = 'created_at') {
   return { whereSql: clauses.length > 0 ? clauses.join(' AND ') : '1=1', params };
 }
 
-function buildUpdaterFilters({ from, to, appVersion, environment = 'Production' } = {}) {
-  const clauses = [];
-  const params = [];
-  appendEnvironmentClause(clauses, params, environment);
-  appendDateRangeClauses(clauses, params, { from, to });
-  if (appVersion) {
-    clauses.push('candidate_version = ?');
-    params.push(appVersion);
-  }
-  return { whereSql: clauses.length > 0 ? clauses.join(' AND ') : '1=1', params };
-}
+// Updater events carry the version being installed, not the version running.
+const buildUpdaterFilters = (filters) => buildFilters(filters, 'candidate_version');
 
 /** Optimization runs (any outcome) per calendar day, oldest first. */
 export function optimizationRunsPerDay(filters) {
@@ -273,9 +264,12 @@ export function recentFailures(filters, limit = 20) {
   };
 }
 
-// --- v5: expanded diagnostic fields. No client sends these yet -- see
-// PROJECT_STATE.md item 9. Not wired into STATS_BUILDERS/the dashboard
-// until a client actually populates the data these would read. ---
+// --- v5: expanded diagnostic fields. The app DOES populate and send every
+// column these read (see the telemetry payload in CloudflareTelemetryService
+// and the INSERT in index.js), and validateEvent accepts them, so the data is
+// in D1 today. What is still missing is only the dashboard wiring: they are
+// deliberately absent from STATS_BUILDERS until a panel consumes them. Keep
+// them covered by test/stats/queries.test.js so they stay usable. ---
 
 /** Distribution of GTA V editions (Legacy/Enhanced/Unknown). */
 export function gtaEditionBreakdown(filters) {

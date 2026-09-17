@@ -42,7 +42,7 @@ function utf8ByteLength(value) {
  * it does not match the closed schema -- never throws.
  */
 export function validateBugReport(payload) {
-  if (typeof payload !== 'object' || payload === null) {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
     return null;
   }
 
