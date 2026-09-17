@@ -17,4 +17,6 @@ For HAGS (requires detected FiveM/GTAV Legacy, games stopped): Games > FiveM > s
 Broker validates typed/session-bound requests, verifies outcomes, records rollback authority and exits. No free-form shell, script or arbitrary command interface exists. Denying UAC prevents administrative changes. The candidate disables Web self-update and startup registration; Store owns updates. Pro/AI are marked unavailable and have no purchase flow.
 
 Detailed reproducible tests and limitations:
-https://github.com/marquezinii/ralven/blob/084424a81b6f92313399b88f16eae1cccd6f8b16/docs/store-certification-test-plan.md
+https://github.com/marquezinii/ralven/blob/9271f52ab8162126a886d2e817a175111356102d/docs/store-certification-test-plan.md
+
+Full local WACK: WARNING (PARTIAL_RUN=FALSE): 21 PASS, 2 optional FAIL (Broker requireAdministrator; process/API and documentation references), and a Launcher DPI warning. Launcher configures PerMonitorV2 through the WinForms API. These findings are disclosed for review; no kit checks were suppressed. Real privileged apply/restore and a Windows 10 host run remain unvalidated locally; please use the linked test plan.
