@@ -85,8 +85,11 @@ public partial class MainWindow
         AccountSettingsPasswordButton.ToolTip = passwordAction;
         AutomationProperties.SetName(AccountSettingsPasswordButton, passwordAction);
         AccountSettingsCurrentPasswordPanel.Visibility = hasPassword ? Visibility.Visible : Visibility.Collapsed;
-        AccountSettingsCurrentMfaPanel.Visibility = user.Factors.Any(
-            factor => factor.FactorType == FirebaseMfaFactorType.Totp)
+        var hasTotp = user.Factors.Any(factor => factor.FactorType == FirebaseMfaFactorType.Totp);
+        AccountSettingsCurrentMfaPanel.Visibility = hasTotp
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        AccountSettingsMfaPanel.Visibility = remoteServicesOptions.FirebaseTotpEnabled || hasTotp
             ? Visibility.Visible
             : Visibility.Collapsed;
         AccountSettingsPasswordRequiredHint.Visibility = user.HasGoogle ? Visibility.Visible : Visibility.Collapsed;
@@ -107,7 +110,7 @@ public partial class MainWindow
             ? LocalizationService.Current.GetString("Settings.Account.LastSignInMethod")
             : null;
         AccountSettingsMfaValue.Text = LocalizationService.Current.GetString(
-            user.Factors.Any(factor => factor.FactorType == FirebaseMfaFactorType.Totp)
+            hasTotp
                 ? "Settings.Account.TwoFactorEnabled"
                 : "Settings.Account.TwoFactorDisabled");
         RemovePhotoButton.Visibility = File.Exists(avatarStore.PathFor(user.Uid)) ? Visibility.Visible : Visibility.Collapsed;
@@ -492,7 +495,9 @@ public partial class MainWindow
 
     private void AccountSettingsMfa_Click(object sender, RoutedEventArgs e)
     {
-        if (accountService is null)
+        if (accountService?.Current.User is not { } user
+            || !remoteServicesOptions.FirebaseTotpEnabled
+                && !user.Factors.Any(factor => factor.FactorType == FirebaseMfaFactorType.Totp))
         {
             return;
         }

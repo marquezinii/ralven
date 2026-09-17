@@ -369,6 +369,20 @@ jobs:
           }
           Push-Location ./infra/cloudflare-worker
           try {
+            npm ci
+            $requiredAccountSecrets = @(
+              'FIREBASE_WEB_API_KEY',
+              'FIREBASE_ADMIN_CLIENT_EMAIL',
+              'FIREBASE_ADMIN_PRIVATE_KEY',
+              'MFA_RECOVERY_CODE_HMAC_SECRET'
+            )
+            $workerSecrets = npx.cmd wrangler secret list --format json | ConvertFrom-Json
+            if ($LASTEXITCODE -ne 0) { throw 'Inspecting production Worker secrets failed.' }
+            $configuredSecretNames = @($workerSecrets | ForEach-Object { $_.name })
+            $missingAccountSecrets = @($requiredAccountSecrets | Where-Object { $_ -notin $configuredSecretNames })
+            if ($missingAccountSecrets.Count -gt 0) {
+              throw "Production account backend is missing required secrets: $($missingAccountSecrets -join ', ')."
+            }
             $schemaQuery = @'
           SELECT
             EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'telemetry_events') AS has_schema,

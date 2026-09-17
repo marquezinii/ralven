@@ -79,7 +79,10 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
         var runtimeEnvironment = AppEnvironment.Resolve();
         remoteServicesOptions = RemoteServicesOptionsLoader.Load(runtimeEnvironment, AppContext.BaseDirectory);
 
-        if (TryCreateHttpsEndpoint(remoteServicesOptions.AccountProfileEndpoint, out var profileEndpoint))
+        if (AccountProfileEndpointPolicy.TryCreate(
+            remoteServicesOptions.AccountProfileEndpoint,
+            runtimeEnvironment,
+            out var profileEndpoint))
         {
             profileService = new CloudflareAccountProfileService(profileEndpoint);
             accountSecurityService = new CloudflareAccountSecurityService(profileEndpoint);
