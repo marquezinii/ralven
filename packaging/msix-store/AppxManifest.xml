@@ -7,13 +7,13 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap uap10 desktop rescap">
   <Identity
-    Name="__PACKAGE_NAME__"
-    Publisher="__PUBLISHER__"
+    Name="VemryxInc.Ralven"
+    Publisher="CN=1FB9E268-F80A-40DF-8E57-BBB7C7849ABD"
     Version="1.7.1.0"
     ProcessorArchitecture="x64" />
   <Properties>
     <DisplayName>Ralven</DisplayName>
-    <PublisherDisplayName>__PUBLISHER_DISPLAY_NAME__</PublisherDisplayName>
+    <PublisherDisplayName>Vemryx Inc.</PublisherDisplayName>
     <Description>Windows diagnostics and reversible, user-approved configuration.</Description>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>

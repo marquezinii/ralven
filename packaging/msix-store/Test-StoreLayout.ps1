@@ -1,10 +1,20 @@
 [CmdletBinding()]
-param([string]$LayoutRoot = "$PSScriptRoot/../../artifacts/msix-store/layout")
+param(
+    [string]$LayoutRoot = "$PSScriptRoot/../../artifacts/msix-store/layout",
+    [string]$PackageName = 'VemryxInc.Ralven',
+    [string]$Publisher = 'CN=1FB9E268-F80A-40DF-8E57-BBB7C7849ABD',
+    [string]$PublisherDisplayName = 'Vemryx Inc.'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath($LayoutRoot)
 [xml]$manifest = Get-Content -LiteralPath (Join-Path $root 'AppxManifest.xml') -Raw
+if ($manifest.Package.Identity.Name -cne $PackageName -or
+    $manifest.Package.Identity.Publisher -cne $Publisher -or
+    $manifest.Package.Properties.PublisherDisplayName -cne $PublisherDisplayName) {
+    throw 'Package identity does not match the expected Partner Center values.'
+}
 $caps = @($manifest.Package.Capabilities.ChildNodes | ForEach-Object { $_.GetAttribute('Name') } | Sort-Object)
 if (($caps -join ',') -ne 'allowElevation,runFullTrust') { throw 'Unexpected capabilities.' }
 if ($manifest.OuterXml -match '__|--demo|windows.startupTask') { throw 'Unresolved identity, demo or startup extension.' }

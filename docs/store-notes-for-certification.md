@@ -8,7 +8,7 @@ account-specific features; never put credentials in this repository.
 
 ---
 
-First MSIX submission, 2026-09-17. See allowElevation in Restricted capabilities notes. Ralven.Launcher.exe starts the bundled Ralven.exe at medium integrity; only the short-lived Ralven.Broker.exe elevates. Launch and diagnosis must not request UAC. Complete the first-run privacy choice; local optimization does not require a Ralven account.
+First MSIX submission, version 1.7.1.0. Package: VemryxInc.Ralven; publisher: Vemryx Inc.; Store ID: 9N61X5M295M5. See allowElevation in Restricted capabilities notes. Ralven.Launcher.exe starts the bundled Ralven.exe at medium integrity; only the short-lived Ralven.Broker.exe elevates. Launch and diagnosis must not request UAC. Complete the first-run privacy choice; local optimization does not require a Ralven account.
 
 Select English in Settings. On an AC-powered test PC, open Optimize, select Balanced, inspect the plan/details and confirm execution. The performance power-plan action records the previous scheme and requests normal Windows UAC when it needs the Broker. Accept UAC, check the action result and active scheme, then use History > Undo on that transaction; restoration also requests UAC. Already active/unavailable schemes or battery power may produce no change/Skipped; use a PC with an available performance scheme for the changed-state test.
 

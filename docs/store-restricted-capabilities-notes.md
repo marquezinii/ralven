@@ -1,6 +1,6 @@
 # Restricted Capabilities notes — paste-ready English
 
-These notes describe the certification candidate, not an approval already received.
+Reserved product: VemryxInc.Ralven (Vemryx Inc.), Store ID 9N61X5M295M5. These notes describe the certification candidate, not an approval already received.
 The official MSIX guidance does not document a character limit for this field.
 Use the main version where it fits; otherwise use the short version. Do not truncate
 security or scope statements. Paste the separate runFullTrust explanation if the

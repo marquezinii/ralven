@@ -2,8 +2,7 @@
 
 English instructions for Microsoft certification engineers. This is the first
 submission to request `allowElevation`, not a claim that Microsoft approved it.
-Use the production-identity package uploaded in Partner Center, not the local
-development-identity package. Record package identity/version/hash, Windows build,
+Use VemryxInc.Ralven version 1.7.1.0 uploaded in Partner Center (PFN VemryxInc.Ralven_vk02nsxq3ddr6; Store ID 9N61X5M295M5). Record package identity/version/hash, Windows build,
 hardware, action outcomes and before/after/restored state with each run.
 
 ## Prerequisites and safety

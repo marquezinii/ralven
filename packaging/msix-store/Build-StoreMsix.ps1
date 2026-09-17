@@ -3,9 +3,9 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+\.\d+$')]
     [string]$PackageVersion = '1.7.1.0',
 
-    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$PackageName,
-    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$Publisher,
-    [Parameter(Mandatory)][ValidateNotNullOrEmpty()][string]$PublisherDisplayName,
+    [ValidateNotNullOrEmpty()][string]$PackageName = 'VemryxInc.Ralven',
+    [ValidateNotNullOrEmpty()][string]$Publisher = 'CN=1FB9E268-F80A-40DF-8E57-BBB7C7849ABD',
+    [ValidateNotNullOrEmpty()][string]$PublisherDisplayName = 'Vemryx Inc.',
     [switch]$Harden,
     [string]$CertificateThumbprint,
 
@@ -78,11 +78,12 @@ try {
     New-SquarePng $sourceLogo (Join-Path $layoutRoot 'Assets\Square44x44Logo.png') 44
     New-SquarePng $sourceLogo (Join-Path $layoutRoot 'Assets\Square150x150Logo.png') 150
 
-    $replacement = 'Version="' + $PackageVersion + '"'
-    $manifest = (Get-Content -LiteralPath $manifestTemplate -Raw).
-        Replace('Version="1.7.1.0"', $replacement)
-    $manifest = $manifest.Replace('__PACKAGE_NAME__', [Security.SecurityElement]::Escape($PackageName)).Replace('__PUBLISHER__', [Security.SecurityElement]::Escape($Publisher)).Replace('__PUBLISHER_DISPLAY_NAME__', [Security.SecurityElement]::Escape($PublisherDisplayName))
-    Set-Content -LiteralPath (Join-Path $layoutRoot 'AppxManifest.xml') -Value $manifest -Encoding utf8
+    [xml]$manifest = Get-Content -LiteralPath $manifestTemplate -Raw
+    $manifest.Package.Identity.SetAttribute('Name', $PackageName)
+    $manifest.Package.Identity.SetAttribute('Publisher', $Publisher)
+    $manifest.Package.Identity.SetAttribute('Version', $PackageVersion)
+    $manifest.Package.Properties.PublisherDisplayName = $PublisherDisplayName
+    $manifest.Save((Join-Path $layoutRoot 'AppxManifest.xml'))
 
     & $makeAppx pack /d $layoutRoot /p $packagePath /o
     if ($LASTEXITCODE -ne 0) { throw 'MakeAppx failed to create the MSIX package.' }

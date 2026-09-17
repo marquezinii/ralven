@@ -3,7 +3,7 @@
 Objetivo: obter uma decisão de certificação sobre `allowElevation`. Não publicar
 automaticamente, substituir Inno Setup nem promover este candidato para o canal Web.
 Documentação Microsoft consultada em 17/09/2026; rótulos podem variar por idioma/conta.
-Não usar o pacote `Ralven.StoreCertificationLocal` para upload de produção.
+Identidade reservada: `VemryxInc.Ralven`; Publisher `CN=1FB9E268-F80A-40DF-8E57-BBB7C7849ABD`; PublisherDisplayName `Vemryx Inc.`. PFN `VemryxInc.Ralven_vk02nsxq3ddr6`; Store ID `9N61X5M295M5`.
 
 ## 1. Conta e reserva
 
@@ -32,13 +32,13 @@ o upload e a certificação. Não comprar certificado: a Store reassina o pacote
 
 ## 2. Gerar o pacote com a identidade real
 
-- [ ] No worktree desta tarefa, executar (substituir os três placeholders):
+- [ ] No worktree desta tarefa, executar com os valores oficiais já reservados:
 
 ```powershell
 ./packaging/msix-store/Build-StoreMsix.ps1 `
-  -PackageName '<Package/Identity/Name>' `
-  -Publisher '<Package/Identity/Publisher>' `
-  -PublisherDisplayName '<Package/Properties/PublisherDisplayName>' `
+  -PackageName 'VemryxInc.Ralven' `
+  -Publisher 'CN=1FB9E268-F80A-40DF-8E57-BBB7C7849ABD' `
+  -PublisherDisplayName 'Vemryx Inc.' `
   -Harden
 ```
 
