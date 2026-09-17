@@ -327,25 +327,17 @@ public sealed partial class MainViewModel : BindableBase, IDisposable
         backgroundServicesStarted = true;
         if (checkForUpdates && releaseUpdateService is not null)
         {
-            _ = CheckForUpdatesAsync().ContinueWith(
-                static t => { _ = t.Exception; },
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            CheckForUpdatesAsync().Forget();
         }
 
         if (liveAlertService is not null)
         {
-            _ = CheckLiveAlertAsync().ContinueWith(
-                static t => { _ = t.Exception; },
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
-                TaskScheduler.Default);
+            CheckLiveAlertAsync().Forget();
             liveAlertTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = LiveAlertPollInterval };
-            liveAlertTimer.Tick += (_, _) => _ = CheckLiveAlertAsync();
+            liveAlertTimer.Tick += (_, _) => CheckLiveAlertAsync().Forget();
             liveAlertTimer.Start();
         }
-        _ = ObservePersonalPcAsync();
+        ObservePersonalPcAsync().Forget();
     }
 
     public async Task RefreshDiagnosticAsync()
@@ -416,6 +408,13 @@ public sealed partial class MainViewModel : BindableBase, IDisposable
         liveMetricsTimer = null;
         liveAlertTimer?.Stop();
         liveAlertTimer = null;
+        // Um DispatcherTimer em execução é mantido vivo pelo dispatcher: sem
+        // parar estes dois, um view model descartado durante uma otimização
+        // continuaria enraizado e disparando.
+        headlineDwellTimer?.Stop();
+        headlineDwellTimer = null;
+        operationTimer?.Stop();
+        operationTimer = null;
         (liveSystemMetricsProvider as IDisposable)?.Dispose();
     }
 }

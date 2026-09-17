@@ -126,6 +126,7 @@
   <data name="ActionResults.BottleneckClassification.None" xml:space="preserve"><value>No se encontró ningún cuello de botella local evidente en esta muestra; repite la medición durante la carga afectada para comparar las señales.</value></data>
   <data name="ActionResults.Engine.InterruptedAction" xml:space="preserve"><value>La ejecución anterior se interrumpió antes de confirmar el estado final de esta acción.</value></data>
   <data name="ActionResults.Engine.NotRunAfterInterruption" xml:space="preserve"><value>No se ejecutó porque la ejecución anterior se interrumpió.</value></data>
+  <data name="ActionResults.Engine.Applying" xml:space="preserve"><value>Aplicando {0}</value></data>
   <data name="ActionResults.Engine.StepCompleted" xml:space="preserve"><value>Paso completado.</value></data>
   <data name="ActionResults.Engine.NotRunAfterCriticalFailure" xml:space="preserve"><value>No se ejecutó tras un fallo crítico anterior.</value></data>
   <data name="ActionResults.Engine.UnmetPrerequisite" xml:space="preserve"><value>Requisito previo no cumplido: {0}.</value></data>

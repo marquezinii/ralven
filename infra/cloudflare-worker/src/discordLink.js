@@ -1,3 +1,5 @@
+import { toBase64Url } from './auth/crypto.js';
+
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 // The 32-symbol alphabet maps bytes uniformly through their low five bits.
 const CODE_ALPHABET_MASK = CODE_ALPHABET.length - 1;
@@ -5,12 +7,6 @@ if ((CODE_ALPHABET.length & CODE_ALPHABET_MASK) !== 0) throw new Error('discord-
 const CODE_LENGTH = 10;
 const CODE_TTL_MS = 10 * 60 * 1000;
 const DISCORD_ID = /^\d{17,20}$/;
-
-function toBase64Url(bytes) {
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
-}
 
 async function hmac(value, secret) {
   if (typeof secret !== 'string' || secret.length < 32) return null;

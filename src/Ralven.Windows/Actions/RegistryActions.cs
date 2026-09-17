@@ -475,12 +475,7 @@ public sealed class GpuPreferenceRegistryAction : AllowlistedRegistryAction
         }
 
         _ = SafePath.EnsureDescendant(fiveMInstallationRoot, fiveMExecutable);
-        fiveMRuntimeDirectory = Path.Combine(
-            SafePath.Normalize(fiveMInstallationRoot),
-            "FiveM.app",
-            "data",
-            "cache",
-            "subprocess");
+        fiveMRuntimeDirectory = RuntimeSubprocessRoot(fiveMInstallationRoot);
         var targets = new List<string> { fiveMExecutable };
         AddFiveMRuntimeTargets(targets, fiveMInstallationRoot);
         addresses = targets
@@ -628,15 +623,21 @@ public sealed class GpuPreferenceRegistryAction : AllowlistedRegistryAction
         return string.Join(';', output) + ";";
     }
 
+    /// <summary>
+    /// Pasta dos subprocessos do runtime do FiveM, composta em dois pontos
+    /// deste arquivo a partir dos mesmos quatro segmentos.
+    /// </summary>
+    private static string RuntimeSubprocessRoot(string installationRoot) => Path.Combine(
+        SafePath.Normalize(installationRoot),
+        "FiveM.app",
+        "data",
+        "cache",
+        "subprocess");
+
     private static void AddFiveMRuntimeTargets(ICollection<string> targets, string installationRoot)
     {
         var normalizedRoot = SafePath.Normalize(installationRoot);
-        var searchRoot = Path.Combine(
-            normalizedRoot,
-            "FiveM.app",
-            "data",
-            "cache",
-            "subprocess");
+        var searchRoot = RuntimeSubprocessRoot(normalizedRoot);
         try
         {
             if (!Directory.Exists(searchRoot)

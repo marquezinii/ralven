@@ -22,9 +22,7 @@ public partial class MainWindow
         var runtimeRoot = RuntimeLayout.Resolve(AppContext.BaseDirectory).RuntimeRoot;
         var version = typeof(MainWindow).Assembly.GetName().Version?.ToString(3);
         if (version is null || runtimeRoot is null) return;
-        var dataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ProductIdentity.Name);
+        var dataRoot = AppDataPaths.Root;
         if (transaction is not null && nonce is not null)
         {
             try { new UpdateHealthReceiptStore(runtimeRoot).Confirm(transaction, version, nonce); }

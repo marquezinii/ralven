@@ -59,29 +59,6 @@ internal static class FiveMInstallationCache
             installation.Root,
             executable.Length,
             executable.LastWriteTimeUtc.Ticks);
-        var directory = Path.GetDirectoryName(path)!;
-        Directory.CreateDirectory(directory);
-        var temporary = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
-        try
-        {
-            await File.WriteAllTextAsync(
-                temporary,
-                JsonSerializer.Serialize(entry, RalvenJson.Options),
-                cancellationToken).ConfigureAwait(false);
-            File.Move(temporary, path, true);
-        }
-        finally
-        {
-            try
-            {
-                if (File.Exists(temporary))
-                {
-                    File.Delete(temporary);
-                }
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-            }
-        }
+        await AtomicFile.WriteJsonAsync(path, entry, RalvenJson.Options, cancellationToken).ConfigureAwait(false);
     }
 }

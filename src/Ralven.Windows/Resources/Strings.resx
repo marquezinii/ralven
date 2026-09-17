@@ -126,6 +126,7 @@
   <data name="ActionResults.BottleneckClassification.None" xml:space="preserve"><value>No obvious local bottleneck was found in this sample; repeat the measurement while the affected workload is running to compare the signals.</value></data>
   <data name="ActionResults.Engine.InterruptedAction" xml:space="preserve"><value>The previous run was interrupted before this action's final state was confirmed.</value></data>
   <data name="ActionResults.Engine.NotRunAfterInterruption" xml:space="preserve"><value>Not run because the previous run was interrupted.</value></data>
+  <data name="ActionResults.Engine.Applying" xml:space="preserve"><value>Applying {0}</value></data>
   <data name="ActionResults.Engine.StepCompleted" xml:space="preserve"><value>Step completed.</value></data>
   <data name="ActionResults.Engine.NotRunAfterCriticalFailure" xml:space="preserve"><value>Not run after an earlier critical failure.</value></data>
   <data name="ActionResults.Engine.UnmetPrerequisite" xml:space="preserve"><value>Unmet prerequisite: {0}.</value></data>

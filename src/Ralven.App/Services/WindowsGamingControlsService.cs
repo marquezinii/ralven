@@ -46,10 +46,7 @@ public sealed class WindowsGamingControlsService
         inspector = new WindowsGamingSettingsInspector(registry);
         processInspector = fiveMProcessInspector;
         actions = CreateActions(registry, fiveMProcessInspector);
-        var journalStore = new JsonWindowsTransactionJournalStore(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ProductIdentity.Name,
-            "Transactions"));
+        var journalStore = new JsonWindowsTransactionJournalStore(AppDataPaths.Combine("Transactions"));
         engine = new WindowsTransactionEngine(
             new WindowsActionCatalog(actions),
             journalStore);
@@ -174,11 +171,7 @@ public sealed class WindowsGamingControlsService
                 await engine.RollbackAsync(
                     transactionId,
                     isElevated: false,
-                    new WindowsRollbackOptions
-                    {
-                        IncludeStandardUserActions = true,
-                        IncludeAdministratorActions = false
-                    },
+                    WindowsRollbackOptions.StandardUserOnly,
                     CancellationToken.None).ConfigureAwait(false);
                 after = inspector.Inspect();
             }
@@ -219,11 +212,7 @@ public sealed class WindowsGamingControlsService
             var result = await engine!.RollbackAsync(
                 transactionId,
                 isElevated: false,
-                new WindowsRollbackOptions
-                {
-                    IncludeStandardUserActions = true,
-                    IncludeAdministratorActions = false
-                },
+                WindowsRollbackOptions.StandardUserOnly,
                 cancellationToken).ConfigureAwait(false);
             var succeeded = result.State == TransactionState.RolledBack;
             return new WindowsGamingRestoreResult(

@@ -393,39 +393,30 @@ internal sealed class ApplicationsPageViewModel : BindableBase, IDisposable
 
         SetInventoryLoading(true);
         InventoryStatusMessage = localization.GetString("Applications.Inventory.Status.Loading");
-        try
-        {
-            inventorySnapshot = await inspector.InspectAsync(cancellationToken);
-            inventoryUnavailable = false;
-            installedApplications = inventorySnapshot.InstalledApplications;
-            startupItems = inventorySnapshot.StartupItems;
-            ApplyInventoryStatus();
-            inventoryBugCode = null;
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception exception) when (exception is not (
-            OutOfMemoryException or StackOverflowException or AccessViolationException))
-        {
-            inventoryUnavailable = true;
-            inventoryBugCode = BugCodeClassifier.ClassifyException(exception, "app-inventory");
-            InventoryStatusMessage = OptimizationFailureMessageFormatter.AppendCode(
-                localization.GetString("Applications.Inventory.Status.Unavailable"),
-                inventoryBugCode,
-                code => localization.Format("Report.ErrorCodeSuffix", code))!;
+        await RunGuardedAsync(
+            async () =>
             {
+                inventorySnapshot = await inspector.InspectAsync(cancellationToken);
+                inventoryUnavailable = false;
+                installedApplications = inventorySnapshot.InstalledApplications;
+                startupItems = inventorySnapshot.StartupItems;
+                ApplyInventoryStatus();
+                inventoryBugCode = null;
+            },
+            exception =>
+            {
+                inventoryUnavailable = true;
+                inventoryBugCode = BugCodeClassifier.ClassifyException(exception, "app-inventory");
+                InventoryStatusMessage = OptimizationFailureMessageFormatter.AppendCode(
+                    localization.GetString("Applications.Inventory.Status.Unavailable"),
+                    inventoryBugCode,
+                    code => localization.Format("Report.ErrorCodeSuffix", code))!;
                 installedApplications = [];
                 startupItems = [];
-            }
-
-            ApplyFilter();
-        }
-        finally
-        {
-            SetInventoryLoading(false);
-        }
+                ApplyFilter();
+            },
+            () => SetInventoryLoading(false),
+            cancellationToken);
     }
 
     public async Task RefreshManagedPackagesAsync(CancellationToken cancellationToken = default)
@@ -437,33 +428,27 @@ internal sealed class ApplicationsPageViewModel : BindableBase, IDisposable
 
         SetLoadingManagedPackages(true);
         ManagedPackagesStatusMessage = localization.GetString("Applications.Packages.Status.Loading");
-        try
-        {
-            managedSnapshot = await packageService.ListInstalledAsync(cancellationToken);
-            managedPackages = managedSnapshot.Packages;
-            ManagedPackagesStatusMessage = GetSnapshotStatus(
-                managedSnapshot,
-                managedPackages.Count > 0
-                    ? "Applications.Packages.Status.Ready"
-                    : "Applications.Packages.Status.Empty");
-            ApplyFilter();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception exception) when (exception is not (
-            OutOfMemoryException or StackOverflowException or AccessViolationException))
-        {
-            managedSnapshot = UnavailablePackageSnapshot();
-            managedPackages = [];
-            ManagedPackagesStatusMessage = localization.GetString("Applications.Packages.Status.Unavailable");
-            ApplyFilter();
-        }
-        finally
-        {
-            SetLoadingManagedPackages(false);
-        }
+        await RunGuardedAsync(
+            async () =>
+            {
+                managedSnapshot = await packageService.ListInstalledAsync(cancellationToken);
+                managedPackages = managedSnapshot.Packages;
+                ManagedPackagesStatusMessage = GetSnapshotStatus(
+                    managedSnapshot,
+                    managedPackages.Count > 0
+                        ? "Applications.Packages.Status.Ready"
+                        : "Applications.Packages.Status.Empty");
+                ApplyFilter();
+            },
+            _ =>
+            {
+                managedSnapshot = UnavailablePackageSnapshot();
+                managedPackages = [];
+                ManagedPackagesStatusMessage = localization.GetString("Applications.Packages.Status.Unavailable");
+                ApplyFilter();
+            },
+            () => SetLoadingManagedPackages(false),
+            cancellationToken);
     }
 
     public async Task CheckApplicationUpdatesAsync(CancellationToken cancellationToken = default)
@@ -475,33 +460,27 @@ internal sealed class ApplicationsPageViewModel : BindableBase, IDisposable
 
         SetCheckingApplicationUpdates(true);
         ApplicationUpdateStatusMessage = localization.GetString("Applications.Updates.Status.Checking");
-        try
-        {
-            await EnsureIgnoreStoreLoadedAsync(cancellationToken);
-            updateSnapshot = await packageService.CheckUpdatesAsync(cancellationToken);
-            applicationUpdates = updateSnapshot.Packages;
-            selectedUpdateKeys.RemoveWhere(key => !applicationUpdates.Any(update =>
-                PackageKey(update).Equals(key, StringComparison.OrdinalIgnoreCase)));
-            ApplyApplicationUpdateStatus();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception exception) when (exception is not (
-            OutOfMemoryException or StackOverflowException or AccessViolationException))
-        {
-            updateSnapshot = UnavailablePackageSnapshot();
-            applicationUpdates = [];
-            selectedUpdateKeys.Clear();
-            ApplicationUpdatesObservedAtLabel = string.Empty;
-            ApplicationUpdateStatusMessage = localization.GetString("Applications.Updates.Status.Unavailable");
-            ApplyFilter();
-        }
-        finally
-        {
-            SetCheckingApplicationUpdates(false);
-        }
+        await RunGuardedAsync(
+            async () =>
+            {
+                await EnsureIgnoreStoreLoadedAsync(cancellationToken);
+                updateSnapshot = await packageService.CheckUpdatesAsync(cancellationToken);
+                applicationUpdates = updateSnapshot.Packages;
+                selectedUpdateKeys.RemoveWhere(key => !applicationUpdates.Any(update =>
+                    PackageKey(update).Equals(key, StringComparison.OrdinalIgnoreCase)));
+                ApplyApplicationUpdateStatus();
+            },
+            _ =>
+            {
+                updateSnapshot = UnavailablePackageSnapshot();
+                applicationUpdates = [];
+                selectedUpdateKeys.Clear();
+                ApplicationUpdatesObservedAtLabel = string.Empty;
+                ApplicationUpdateStatusMessage = localization.GetString("Applications.Updates.Status.Unavailable");
+                ApplyFilter();
+            },
+            () => SetCheckingApplicationUpdates(false),
+            cancellationToken);
     }
 
     public async Task SearchPackagesAsync(CancellationToken cancellationToken = default)
@@ -514,33 +493,27 @@ internal sealed class ApplicationsPageViewModel : BindableBase, IDisposable
 
         SetSearchingPackages(true);
         DiscoverStatusMessage = localization.GetString("Applications.Discover.Status.Searching");
-        try
-        {
-            discoverSnapshot = await packageService.SearchAsync(query, cancellationToken);
-            discoveredPackages = discoverSnapshot.Packages;
-            DiscoverStatusMessage = GetSnapshotStatus(
-                discoverSnapshot,
-                discoveredPackages.Count > 0
-                    ? "Applications.Discover.Status.Results"
-                    : "Applications.Discover.Status.NoResults");
-            ApplyDiscoveredPackages();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            return;
-        }
-        catch (Exception exception) when (exception is not (
-            OutOfMemoryException or StackOverflowException or AccessViolationException))
-        {
-            discoverSnapshot = UnavailablePackageSnapshot();
-            discoveredPackages = [];
-            DiscoverStatusMessage = localization.GetString("Applications.Discover.Status.Unavailable");
-            ApplyDiscoveredPackages();
-        }
-        finally
-        {
-            SetSearchingPackages(false);
-        }
+        await RunGuardedAsync(
+            async () =>
+            {
+                discoverSnapshot = await packageService.SearchAsync(query, cancellationToken);
+                discoveredPackages = discoverSnapshot.Packages;
+                DiscoverStatusMessage = GetSnapshotStatus(
+                    discoverSnapshot,
+                    discoveredPackages.Count > 0
+                        ? "Applications.Discover.Status.Results"
+                        : "Applications.Discover.Status.NoResults");
+                ApplyDiscoveredPackages();
+            },
+            _ =>
+            {
+                discoverSnapshot = UnavailablePackageSnapshot();
+                discoveredPackages = [];
+                DiscoverStatusMessage = localization.GetString("Applications.Discover.Status.Unavailable");
+                ApplyDiscoveredPackages();
+            },
+            () => SetSearchingPackages(false),
+            cancellationToken);
     }
 
     public Task InstallPackageAsync(
@@ -668,46 +641,74 @@ internal sealed class ApplicationsPageViewModel : BindableBase, IDisposable
 
         SetPackageOperationRunning(true);
         SetOperationStatus(operation, "Running", current.Name);
+        await RunGuardedAsync(
+            async () =>
+            {
+                var result = await packageService.ExecuteAsync(operation, current, cancellationToken);
+                SetOperationResultStatus(operation, current.Name, result);
+                if (result.Outcome is WindowsApplicationPackageOutcome.Succeeded
+                    or WindowsApplicationPackageOutcome.RebootRequired)
+                {
+                    if (operation == WindowsApplicationPackageOperation.Install)
+                    {
+                        managedPackages = managedPackages
+                            .Append(current with { AvailableVersion = null })
+                            .DistinctBy(PackageKey, StringComparer.OrdinalIgnoreCase)
+                            .ToArray();
+                    }
+                    else
+                    {
+                        managedPackages = managedPackages
+                            .Where(package => !SamePackage(package, current))
+                            .ToArray();
+                        applicationUpdates = applicationUpdates
+                            .Where(package => !SamePackage(package, current))
+                            .ToArray();
+                        selectedUpdateKeys.Remove(PackageKey(current));
+                    }
+
+                    ApplyFilter();
+                }
+            },
+            _ => SetOperationStatus(operation, "Failed", current.Name, localization.GetString("Common.Unknown")),
+            () => SetPackageOperationRunning(false),
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Executa <paramref name="body"/> tratando cancelamento como saída
+    /// silenciosa e qualquer outra falha por <paramref name="onFailure"/>,
+    /// sempre encerrando com <paramref name="complete"/>.
+    /// </summary>
+    /// <remarks>
+    /// Os cinco carregamentos desta página repetiam o mesmo par de
+    /// <c>catch</c>, incluindo a exclusão de <see cref="OutOfMemoryException"/>,
+    /// <see cref="StackOverflowException"/> e <c>AccessViolationException</c>.
+    /// Com o filtro em um lugar só, um novo carregamento não pode esquecê-lo.
+    /// As operações cujo cancelamento precisa restaurar estado ou publicar
+    /// mensagem própria continuam com o tratamento explícito delas.
+    /// </remarks>
+    private static async Task RunGuardedAsync(
+        Func<Task> body,
+        Action<Exception> onFailure,
+        Action complete,
+        CancellationToken cancellationToken)
+    {
         try
         {
-            var result = await packageService.ExecuteAsync(operation, current, cancellationToken);
-            SetOperationResultStatus(operation, current.Name, result);
-            if (result.Outcome is WindowsApplicationPackageOutcome.Succeeded
-                or WindowsApplicationPackageOutcome.RebootRequired)
-            {
-                if (operation == WindowsApplicationPackageOperation.Install)
-                {
-                    managedPackages = managedPackages
-                        .Append(current with { AvailableVersion = null })
-                        .DistinctBy(PackageKey, StringComparer.OrdinalIgnoreCase)
-                        .ToArray();
-                }
-                else
-                {
-                    managedPackages = managedPackages
-                        .Where(package => !SamePackage(package, current))
-                        .ToArray();
-                    applicationUpdates = applicationUpdates
-                        .Where(package => !SamePackage(package, current))
-                        .ToArray();
-                    selectedUpdateKeys.Remove(PackageKey(current));
-                }
-
-                ApplyFilter();
-            }
+            await body();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return;
         }
         catch (Exception exception) when (exception is not (
             OutOfMemoryException or StackOverflowException or AccessViolationException))
         {
-            SetOperationStatus(operation, "Failed", current.Name, localization.GetString("Common.Unknown"));
+            onFailure(exception);
         }
         finally
         {
-            SetPackageOperationRunning(false);
+            complete();
         }
     }
 

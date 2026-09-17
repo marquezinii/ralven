@@ -167,13 +167,6 @@ public sealed class CloudflareBugReportService : IBugReportService
         }
     }
 
-    private static bool LooksLikeEmail(string value) =>
-        System.Text.RegularExpressions.Regex.IsMatch(
-            value,
-            @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
-            System.Text.RegularExpressions.RegexOptions.None,
-            TimeSpan.FromMilliseconds(100));
-
     private static Uri ValidateEndpoint(Uri value) =>
         CloudflareTransportDefaults.ValidateHttpsEndpoint(value, "Endpoint de relato inválido.");
 

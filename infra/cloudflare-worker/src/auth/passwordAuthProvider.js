@@ -26,17 +26,10 @@ import {
   readSessionCookie,
   hashToken,
 } from './sessionStore.js';
-import { readBoundedJson } from '../requestSecurity.js';
+import { jsonResponse, readBoundedJson } from '../requestSecurity.js';
 
 const MAX_LOGIN_BODY_BYTES = 4 * 1024;
 const MAX_PASSWORD_CHARACTERS = 1024;
-
-function jsonResponse(body, status, extraHeaders = {}) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...extraHeaders },
-  });
-}
 
 function clientIp(request) {
   // Cloudflare always sets this header at the edge; it cannot be spoofed by

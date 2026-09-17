@@ -31,7 +31,7 @@ public interface IUpdateProcessLauncher
 /// </summary>
 public sealed class SilentUpdateInstaller : ISilentUpdateInstaller
 {
-    private const string UpdaterFileName = "Ralven.Updater.exe";
+    internal const string UpdaterFileName = "Ralven.Updater.exe";
     private readonly IUpdateProcessLauncher launcher;
     private readonly string updatesRootDirectory;
     private readonly string? logDirectory;

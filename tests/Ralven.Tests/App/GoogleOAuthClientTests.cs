@@ -192,6 +192,26 @@ public sealed class GoogleOAuthClientTests
     private static string Base64Url(byte[] value) =>
         Convert.ToBase64String(value).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
+    /// <summary>
+    /// A página de retorno do OAuth é um recurso incorporado: se o arquivo sair
+    /// do `.csproj` ou o nome lógico mudar, o navegador recebe uma exceção no
+    /// meio de um login que já deu certo, e só em tempo de execução.
+    /// </summary>
+    [Fact]
+    public void OAuthCallbackTemplate_IsEmbeddedAndCarriesEveryPlaceholder()
+    {
+        using var stream = typeof(GoogleOAuthClient).Assembly
+            .GetManifestResourceStream("Ralven.App.Resources.oauth-callback.html");
+
+        Assert.NotNull(stream);
+        using var reader = new StreamReader(stream!);
+        var template = reader.ReadToEnd();
+        Assert.StartsWith("<!doctype html>", template, StringComparison.Ordinal);
+        Assert.Contains("{culture}", template, StringComparison.Ordinal);
+        Assert.Contains("{icon}", template, StringComparison.Ordinal);
+        Assert.Contains("{body}", template, StringComparison.Ordinal);
+    }
+
     private sealed class ThrowingHandler(Action onSend) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)

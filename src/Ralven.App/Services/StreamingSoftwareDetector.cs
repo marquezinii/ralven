@@ -135,12 +135,6 @@ public sealed class StreamingSoftwareDetector
     private static (IReadOnlyList<string> ProductNames, DateTimeOffset CachedAt)? registryCache;
     private static readonly TimeSpan RegistryCacheTtl = TimeSpan.FromMinutes(5);
 
-    public Task<StreamingSoftwareSnapshot> DetectAsync(
-        CancellationToken cancellationToken = default)
-    {
-        return Task.Run(() => Detect(cancellationToken), cancellationToken);
-    }
-
     public StreamingSoftwareSnapshot Detect(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -153,7 +147,6 @@ public sealed class StreamingSoftwareDetector
         // Run registry scan and executable check in parallel
         var installedProductNames = new List<string>();
         var executableKinds = new HashSet<StreamingSoftwareKind>();
-        var installationScanComplete = true;
 
         var registryTask = Task.Run(() =>
         {
@@ -168,8 +161,9 @@ public sealed class StreamingSoftwareDetector
             return complete;
         }, cancellationToken);
 
-        Task.WaitAll(registryTask, executableTask);
-        installationScanComplete = registryTask.Result && executableTask.Result;
+        // Cada .Result já aguarda a respectiva tarefa; um WaitAll antes disso
+        // seria só uma segunda espera do mesmo par.
+        var installationScanComplete = registryTask.Result && executableTask.Result;
 
         return StreamingSoftwareClassifier.CreateSnapshot(
             processNames,

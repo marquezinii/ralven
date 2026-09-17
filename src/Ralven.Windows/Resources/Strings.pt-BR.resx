@@ -126,6 +126,7 @@
   <data name="ActionResults.BottleneckClassification.None" xml:space="preserve"><value>Nenhum gargalo local evidente foi encontrado nesta amostra; repita a medição durante a carga afetada para comparar os sinais.</value></data>
   <data name="ActionResults.Engine.InterruptedAction" xml:space="preserve"><value>A execução anterior foi interrompida antes da confirmação do estado final desta ação.</value></data>
   <data name="ActionResults.Engine.NotRunAfterInterruption" xml:space="preserve"><value>Não executada porque a execução anterior foi interrompida.</value></data>
+  <data name="ActionResults.Engine.Applying" xml:space="preserve"><value>Aplicando {0}</value></data>
   <data name="ActionResults.Engine.StepCompleted" xml:space="preserve"><value>Etapa concluída.</value></data>
   <data name="ActionResults.Engine.NotRunAfterCriticalFailure" xml:space="preserve"><value>Não executada após uma falha crítica anterior.</value></data>
   <data name="ActionResults.Engine.UnmetPrerequisite" xml:space="preserve"><value>Pré-requisito não atendido: {0}.</value></data>

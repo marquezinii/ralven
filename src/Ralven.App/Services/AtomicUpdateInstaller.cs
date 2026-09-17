@@ -17,8 +17,7 @@ public sealed class AtomicUpdateInstaller : ISilentUpdateInstaller
     {
         this.runtimeRoot = UpdatePathSafety.EnsureNoReparsePoints(runtimeRoot);
         this.launcherPath = UpdatePathSafety.EnsureNoReparsePoints(launcherPath);
-        dataRoot = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Ralven");
+        dataRoot = AppDataPaths.Root;
         diagnostics = new UpdaterDiagnostics(dataRoot);
     }
 

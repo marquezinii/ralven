@@ -47,6 +47,7 @@ public sealed class PersonalWorkspaceService
     private readonly bool inMemory;
     private readonly SemaphoreSlim gate = new(1, 1);
     private PersonalWorkspace memory = new();
+    private const string WorkspaceFileName = "workspace.json";
     private static readonly JsonSerializerOptions JsonOptions = new(RalvenJson.Options) { WriteIndented = true };
 
     public PersonalWorkspaceService(
@@ -58,8 +59,7 @@ public sealed class PersonalWorkspaceService
     {
         this.authorizePro = authorizePro;
         this.inMemory = inMemory;
-        this.directory = Path.GetFullPath(directory ?? Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ProductIdentity.Name, "Personal"));
+        this.directory = Path.GetFullPath(directory ?? AppDataPaths.Combine("Personal"));
         this.localization = localization ?? LocalizationService.Current;
         this.mouseAcceleration = mouseAcceleration ?? new WindowsMouseAccelerationInspector();
     }
@@ -250,19 +250,12 @@ public sealed class PersonalWorkspaceService
             Validate(next);
             if (inMemory) { memory = next; return next; }
             EnsureSafePath();
-            Directory.CreateDirectory(directory);
-            var temporary = Path.Combine(directory, $"workspace-{Guid.NewGuid():N}.tmp");
-            try
-            {
-                await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(next, JsonOptions), cancellationToken).ConfigureAwait(false);
-                cancellationToken.ThrowIfCancellationRequested();
-                EnsureSafePath();
-                File.Move(temporary, Path.Combine(directory, "workspace.json"), true);
-            }
-            finally
-            {
-                if (File.Exists(temporary)) File.Delete(temporary);
-            }
+            await AtomicFile.WriteJsonAsync(
+                WorkspacePath,
+                next,
+                JsonOptions,
+                cancellationToken,
+                validateDestination: _ => EnsureSafePath()).ConfigureAwait(false);
             return next;
         }
         finally { gate.Release(); }
@@ -272,7 +265,7 @@ public sealed class PersonalWorkspaceService
     {
         if (inMemory) return memory;
         EnsureSafePath();
-        var path = Path.Combine(directory, "workspace.json");
+        var path = WorkspacePath;
         if (!File.Exists(path)) return new();
         await using var stream = File.OpenRead(path);
         if (stream.Length > 512 * 1024) throw new InvalidDataException("Personal workspace exceeds its size limit.");
@@ -282,17 +275,9 @@ public sealed class PersonalWorkspaceService
         return state;
     }
 
-    private void EnsureSafePath()
-    {
-        for (var parent = new DirectoryInfo(directory); parent is not null; parent = parent.Parent)
-        {
-            if (parent.Exists && parent.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                throw new IOException("Personal workspace cannot follow a reparse point.");
-        }
-        var file = new FileInfo(Path.Combine(directory, "workspace.json"));
-        if (file.Exists && file.Attributes.HasFlag(FileAttributes.ReparsePoint))
-            throw new IOException("Personal workspace cannot follow a reparse point.");
-    }
+    private string WorkspacePath => Path.Combine(directory, WorkspaceFileName);
+
+    private void EnsureSafePath() => SafePath.EnsureNoReparsePoints(WorkspacePath);
 
     private static void Validate(PersonalWorkspace state)
     {

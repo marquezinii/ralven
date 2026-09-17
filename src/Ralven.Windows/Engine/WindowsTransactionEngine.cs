@@ -28,6 +28,17 @@ public sealed record WindowsTransactionOptions
 
 public sealed record WindowsRollbackOptions
 {
+    /// <summary>
+    /// Desfaz somente a fase de usuário padrão. É a opção usada por todo
+    /// chamador que não dispõe do broker elevado, e era escrita por extenso em
+    /// cada um deles. Seguro compartilhar: as propriedades são <c>init</c>.
+    /// </summary>
+    public static WindowsRollbackOptions StandardUserOnly { get; } = new()
+    {
+        IncludeStandardUserActions = true,
+        IncludeAdministratorActions = false
+    };
+
     public bool IncludeStandardUserActions { get; init; } = true;
 
     public bool IncludeAdministratorActions { get; init; } = true;
@@ -352,6 +363,26 @@ public sealed class WindowsTransactionEngine
         return CreateResult(journal, [], GetDeferredAdministratorIds(journal), null);
     }
 
+    /// <summary>
+    /// Devolve a ação à fase do broker por exigir elevação neste computador.
+    /// Não é falha: a entrada volta ao journal como se nunca tivesse sido
+    /// tentada.
+    /// </summary>
+    /// <remarks>
+    /// Os dois caminhos de execução repetiam este recuo e divergiam: o estrito
+    /// não limpava <c>CompletedAtUtc</c>. Como o journal é recarregado entre
+    /// execuções, uma entrada retomada podia acabar marcada como adiada e, ao
+    /// mesmo tempo, carregando o instante de conclusão de uma tentativa
+    /// anterior.
+    /// </remarks>
+    private static void DeferToBrokerPhase(WindowsActionJournalEntry entry)
+    {
+        entry.State = ActionJournalState.DeferredPrivilege;
+        entry.Error = null;
+        entry.StartedAtUtc = null;
+        entry.CompletedAtUtc = null;
+    }
+
     private async Task ApplyAndCommitAsync(
         WindowsTransactionJournal journal,
         IReadOnlyList<(IWindowsOptimizationAction Action, WindowsActionJournalEntry Entry)> selected,
@@ -373,7 +404,7 @@ public sealed class WindowsTransactionEngine
             context.Progress?.Report(new WindowsActionProgress(
                 context.TransactionId,
                 item.Action.Metadata.Id,
-                $"Aplicando {item.Action.Metadata.Name}",
+                WindowsActionText.Format("ActionResults.Engine.Applying", item.Action.Metadata.Name),
                 completedWeight,
                 totalWeight));
 
@@ -388,11 +419,7 @@ public sealed class WindowsTransactionEngine
                 && item.Action.Metadata.RequiredPrivilege == RequiredPrivilege.Administrator
                 && item.Action.Metadata.AttemptWithoutElevationFirst)
             {
-                // Same "defer instead of fail" handling as the
-                // isolated-execution path (see ExecuteIsolatedAsync).
-                item.Entry.State = ActionJournalState.DeferredPrivilege;
-                item.Entry.StartedAtUtc = null;
-                item.Entry.Error = null;
+                DeferToBrokerPhase(item.Entry);
                 await journalStore.SaveAsync(journal, CancellationToken.None).ConfigureAwait(false);
                 continue;
             }
@@ -1131,13 +1158,7 @@ public sealed class WindowsTransactionEngine
             && item.Action.Metadata.RequiredPrivilege == RequiredPrivilege.Administrator
             && item.Action.Metadata.AttemptWithoutElevationFirst)
         {
-            // This computer genuinely requires elevation for this
-            // action -- not a failure, just defer it back to the
-            // broker phase exactly as if it had never been attempted.
-            item.Entry.State = ActionJournalState.DeferredPrivilege;
-            item.Entry.Error = null;
-            item.Entry.CompletedAtUtc = null;
-            item.Entry.StartedAtUtc = null;
+            DeferToBrokerPhase(item.Entry);
             await journalStore.SaveAsync(journal, CancellationToken.None).ConfigureAwait(false);
             return IsolatedItemResult.Deferred;
         }

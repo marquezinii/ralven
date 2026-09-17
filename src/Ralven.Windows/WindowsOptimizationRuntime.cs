@@ -52,7 +52,7 @@ public sealed record WindowsOptimizationEnvironment
             LegacyGraphicsSettingsPath = Path.Combine(
                 roamingAppData,
                 "CitizenFX",
-                "gta5_settings.xml"),
+                GraphicsSettingsFile.ExpectedFileName(GraphicsSettingsTarget.FiveM)),
             GtaVInstallationRoot = gtaV.InstallationRoot,
             GtaVExecutablePath = gtaV.ExecutablePath,
             GtaVGraphicsSettingsPath = gtaV.GraphicsSettingsPath,
@@ -610,7 +610,7 @@ public sealed class WindowsOptimizationActionFactory
         }
 
         if (!plan.IsExecutable
-            || !IsSupportedScopeAndEdition(plan.Scope, plan.Edition)
+            || !PlanScopeSupport.IsSupported(plan.Scope, plan.Edition)
             || plan.Blocks.Count != 0
             || plan.Actions.Count == 0)
         {
@@ -647,15 +647,6 @@ public sealed class WindowsOptimizationActionFactory
         }
     }
 
-    private static bool IsSupportedScopeAndEdition(
-        OptimizationScope scope,
-        FiveMEdition edition) => scope switch
-        {
-            OptimizationScope.FiveMLegacy => edition == FiveMEdition.Legacy,
-            OptimizationScope.GeneralWindows => Enum.IsDefined(edition),
-            _ => false
-        };
-
     private static WindowsOptimizationEnvironment ValidateEnvironment(
         WindowsOptimizationEnvironment environment)
     {
@@ -672,7 +663,7 @@ public sealed class WindowsOptimizationActionFactory
 
         var settings = Path.GetFullPath(environment.LegacyGraphicsSettingsPath);
         if (!Path.GetFileName(settings).Equals(
-            "gta5_settings.xml",
+            GraphicsSettingsFile.ExpectedFileName(GraphicsSettingsTarget.FiveM),
             StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(
@@ -681,7 +672,9 @@ public sealed class WindowsOptimizationActionFactory
         }
 
         var gtaSettings = Path.GetFullPath(environment.GtaVGraphicsSettingsPath);
-        if (!Path.GetFileName(gtaSettings).Equals("settings.xml", StringComparison.OrdinalIgnoreCase))
+        if (!Path.GetFileName(gtaSettings).Equals(
+            GraphicsSettingsFile.ExpectedFileName(GraphicsSettingsTarget.GtaV),
+            StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException(
                 "GtaVGraphicsSettingsPath deve apontar para settings.xml.",
@@ -703,7 +696,9 @@ public sealed class WindowsOptimizationActionFactory
 
             gtaRoot = SafePath.Normalize(environment.GtaVInstallationRoot);
             gtaExecutable = SafePath.EnsureDescendant(gtaRoot, environment.GtaVExecutablePath);
-            if (!Path.GetFileName(gtaExecutable).Equals("GTA5.exe", StringComparison.OrdinalIgnoreCase))
+            if (!Path.GetFileName(gtaExecutable).Equals(
+                GraphicsSettingsFile.GtaVExecutableName,
+                StringComparison.OrdinalIgnoreCase))
             {
                 throw new ArgumentException(
                     "GtaVExecutablePath deve apontar para GTA5.exe.",

@@ -774,12 +774,15 @@ public sealed partial class LocalizedInterfaceContractTests
             Assert.Contains(values, value => value == ProductIdentity.DisplayName);
         }
 
+        // A página de retorno do OAuth deixou de ser uma string dentro do cliente
+        // e passou a ser o recurso incorporado abaixo; a marca que este teste
+        // protege continua exatamente a mesma.
         var oauth = File.ReadAllText(Path.Combine(
             root,
             "src",
             "Ralven.App",
-            "Services",
-            "GoogleOAuthClient.cs"));
+            "Resources",
+            "oauth-callback.html"));
         Assert.Contains("<title>Ralven</title>", oauth, StringComparison.Ordinal);
         Assert.Contains("aria-label=\"Ralven\"", oauth, StringComparison.Ordinal);
     }

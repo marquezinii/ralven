@@ -16,8 +16,8 @@ public sealed class UpdateHealthReceiptStore
 
     public void Confirm(string transactionId, string version, string nonce)
     {
-        if (transactionId.Length != 32 || !transactionId.All(char.IsAsciiHexDigit)
-            || !Version.TryParse(version, out _) || nonce.Length != 64 || !nonce.All(char.IsAsciiHexDigit))
+        if (!UpdateTransactionIdentity.IsValid(transactionId, nonce)
+            || !Version.TryParse(version, out _))
             throw new ArgumentException("Recibo de saúde inválido.");
         UpdatePathSafety.EnsureNoReparsePoints(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

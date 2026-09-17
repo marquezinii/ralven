@@ -270,27 +270,14 @@ public sealed class CloudflareAccountSecurityService : IAccountSecurityService
         error is { Length: > 0 and <= 64 }
         && error.All(character => char.IsAsciiLetterLower(character) || character is '-') ? error : null;
 
-    private static async Task<T?> ReadBoundedJsonAsync<T>(
+    private static Task<T?> ReadBoundedJsonAsync<T>(
         HttpResponseMessage response,
         CancellationToken cancellationToken)
-    {
-        if (response.Content.Headers.ContentLength is > MaximumResponseBytes)
-        {
-            return default;
-        }
-
-        try
-        {
-            await response.Content.LoadIntoBufferAsync(MaximumResponseBytes, cancellationToken).ConfigureAwait(false);
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            return await JsonSerializer.DeserializeAsync<T>(stream, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or JsonException)
-        {
-            return default;
-        }
-    }
+        => CloudflareTransportDefaults.ReadBoundedJsonAsync<T>(
+            response,
+            MaximumResponseBytes,
+            options: null,
+            cancellationToken);
 
     private sealed record RecoveryCodesResponse(
         [property: JsonPropertyName("recoveryCodes")] List<string>? RecoveryCodes,

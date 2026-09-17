@@ -180,29 +180,6 @@ public sealed class SafeFileTree
         return new SafeFileEnumerationResult(files, reparsePoints, inaccessible);
     }
 
-    public void PurgeCreatedTree(string root)
-    {
-        var normalizedRoot = SafePath.Normalize(root);
-        if (!Directory.Exists(normalizedRoot))
-        {
-            return;
-        }
-
-        var enumeration = EnumerateFiles(normalizedRoot, _ => true);
-        if (enumeration.SkippedReparsePoints.Count > 0)
-        {
-            throw new IOException(
-                $"Refusing to purge '{normalizedRoot}' because it contains a reparse point.");
-        }
-
-        foreach (var file in enumeration.Files)
-        {
-            File.Delete(file.FullPath);
-        }
-
-        DeleteEmptyDirectoriesBottomUp(normalizedRoot);
-    }
-
     public void DeleteEmptyDirectoriesBottomUp(string root)
     {
         var normalizedRoot = SafePath.Normalize(root);

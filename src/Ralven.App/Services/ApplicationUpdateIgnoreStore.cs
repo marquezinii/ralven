@@ -21,10 +21,7 @@ internal sealed class JsonApplicationUpdateIgnoreStore : IApplicationUpdateIgnor
     private readonly string path;
 
     public JsonApplicationUpdateIgnoreStore()
-        : this(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            ProductIdentity.Name,
-            "application-update-ignores.json"))
+        : this(AppDataPaths.Combine("application-update-ignores.json"))
     {
     }
 
@@ -85,39 +82,17 @@ internal sealed class JsonApplicationUpdateIgnoreStore : IApplicationUpdateIgnor
             throw new ArgumentException("The ignore store contains an invalid package key.", nameof(packageKeys));
         }
 
-        var directory = Path.GetDirectoryName(path)
-            ?? throw new InvalidOperationException("The ignore store has no parent directory.");
-        Directory.CreateDirectory(directory);
-        SafePath.EnsureNoReparsePoints(directory);
-        var temporary = Path.Combine(directory, $".application-update-ignores.{Guid.NewGuid():N}.tmp");
-        try
+        if (Path.GetDirectoryName(path) is null)
         {
-            await using (var stream = new FileStream(
-                temporary,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                4096,
-                FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(
-                    stream,
-                    packageKeys.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
-                    RalvenJson.Options,
-                    cancellationToken).ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
+            throw new InvalidOperationException("The ignore store has no parent directory.");
+        }
 
-            SafePath.EnsureNoReparsePoints(path);
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary))
-            {
-                File.Delete(temporary);
-            }
-        }
+        await AtomicFile.WriteJsonAsync(
+            path,
+            packageKeys.Order(StringComparer.OrdinalIgnoreCase).ToArray(),
+            RalvenJson.Options,
+            cancellationToken,
+            validateDestination: target => SafePath.EnsureNoReparsePoints(target)).ConfigureAwait(false);
     }
 
     private static bool IsValidKey(string? value) => value is { Length: > 2 and <= 600 }

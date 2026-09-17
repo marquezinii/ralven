@@ -289,10 +289,7 @@ public partial class App : System.Windows.Application
     {
         try
         {
-            var directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                ProductIdentity.Name,
-                "Logs");
+            var directory = AppDataPaths.Combine("Logs");
             Directory.CreateDirectory(directory);
             File.AppendAllText(
                 Path.Combine(directory, "crash.log"),

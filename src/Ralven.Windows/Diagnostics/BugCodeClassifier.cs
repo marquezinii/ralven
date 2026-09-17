@@ -85,46 +85,6 @@ public static class BugCodeClassifier
     }
 
     /// <summary>
-    /// Classifies an exception from the updater/launcher.
-    /// </summary>
-    public static BugCode ClassifyUpdaterException(Exception exception, string? stage = null)
-    {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        return exception switch
-        {
-            System.Security.Cryptography.CryptographicException => BugCode.UPD_INSTALLER_VERIFICATION,
-            System.IO.InvalidDataException => BugCode.UPD_INSTALLER_INTEGRITY,
-            UnauthorizedAccessException => BugCode.UPD_INSTALLER_EXECUTION,
-            FileNotFoundException => BugCode.UPD_INSTALLER_EXECUTION,
-            System.IO.IOException => BugCode.UPD_STAGING,
-            HttpRequestException => BugCode.UPD_INSTALLER_DOWNLOAD,
-            TaskCanceledException => BugCode.NET_UPDATE_NETWORK,
-            TimeoutException => BugCode.UPD_PARENT_TIMEOUT,
-            InvalidOperationException invOpEx
-                when invOpEx.Message.Contains("signature", StringComparison.OrdinalIgnoreCase)
-                    || invOpEx.Message.Contains("hash", StringComparison.OrdinalIgnoreCase)
-                    || invOpEx.Message.Contains("security", StringComparison.OrdinalIgnoreCase)
-                => BugCode.UPD_SECURITY_POLICY,
-            _ => stage switch
-            {
-                "manifest-download" => BugCode.UPD_MANIFEST_DOWNLOAD,
-                "manifest-verify" => BugCode.UPD_MANIFEST_VERIFICATION,
-                "manifest-parse" => BugCode.UPD_MANIFEST_PARSING,
-                "installer-download" => BugCode.UPD_INSTALLER_DOWNLOAD,
-                "installer-verify" => BugCode.UPD_INSTALLER_VERIFICATION,
-                "staging" => BugCode.UPD_STAGING,
-                "activation" => BugCode.UPD_ACTIVATION,
-                "installer-run" => BugCode.UPD_INSTALLER_EXECUTION,
-                "health-check" => BugCode.UPD_HEALTH_CHECK,
-                "rollback" => BugCode.UPD_ROLLBACK,
-                "handoff" => BugCode.UPD_HANDOFF_INVALID,
-                _ => BugCode.UPD_INSTALLER_EXECUTION
-            }
-        };
-    }
-
-    /// <summary>
     /// Classifies an exception from the broker (elevated operations).
     /// </summary>
     public static BugCode ClassifyBrokerException(Exception exception, string? actionId = null)

@@ -227,15 +227,16 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var historyPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Ralven", "history.json");
-            if (!File.Exists(historyPath))
+            // O histórico vive nos journals de transação desde que `history.json`
+            // deixou de ser escrito; ler o arquivo antigo mantinha esta dimensão
+            // permanentemente nula em qualquer instalação não migrada.
+            var journalDirectory = AppDataPaths.Combine("Transactions");
+            if (!Directory.Exists(journalDirectory))
             {
                 return null;
             }
 
-            var lastWrite = File.GetLastWriteTimeUtc(historyPath);
+            var lastWrite = Directory.GetLastWriteTimeUtc(journalDirectory);
             var daysSince = (int)(DateTime.UtcNow - lastWrite).TotalDays;
             return daysSince switch
             {
@@ -255,9 +256,7 @@ public sealed partial class MainViewModel
     {
         try
         {
-            var fiveMCount = Process.GetProcessesByName("FiveM").Length;
-            var gtaCount = Process.GetProcessesByName("GTA5").Length;
-            var total = fiveMCount + gtaCount;
+            var total = CountRunning("FiveM") + CountRunning("GTA5");
             return total switch
             {
                 0 => 0,
@@ -268,6 +267,27 @@ public sealed partial class MainViewModel
         catch (Exception ex) when (ex is not (OutOfMemoryException or StackOverflowException))
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Conta os processos em execução com este nome e descarta cada
+    /// <see cref="Process"/> retornado: cada instância carrega um handle nativo
+    /// que ficaria para o finalizador a cada relatório de otimização.
+    /// </summary>
+    private static int CountRunning(string processName)
+    {
+        var processes = Process.GetProcessesByName(processName);
+        try
+        {
+            return processes.Length;
+        }
+        finally
+        {
+            foreach (var process in processes)
+            {
+                process.Dispose();
+            }
         }
     }
 

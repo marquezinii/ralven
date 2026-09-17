@@ -36,7 +36,7 @@ public sealed class FirebaseAuthService : IFirebaseAuthService
 
     public FirebaseAuthService(string apiKey, IAccountProfileService profiles, ILocalizationService? localization = null)
         : this(new HttpClient { Timeout = TimeSpan.FromSeconds(20) }, apiKey,
-            new SecureFirebaseSessionStore(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ProductIdentity.Name, "firebase.session")), profiles, localization)
+            new SecureFirebaseSessionStore(AppDataPaths.Combine("firebase.session")), profiles, localization)
     { }
 
     internal FirebaseAuthService(HttpClient client, string apiKey, SecureFirebaseSessionStore sessionStore, IAccountProfileService profiles, ILocalizationService? localization = null)

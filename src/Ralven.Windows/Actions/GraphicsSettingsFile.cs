@@ -9,11 +9,17 @@ namespace Ralven.Windows.Actions;
 /// </summary>
 internal static class GraphicsSettingsFile
 {
+    /// <summary>Executável que identifica uma instalação do GTA V.</summary>
+    public const string GtaVExecutableName = "GTA5.exe";
+
+    private const string FiveMSettingsFileName = "gta5_settings.xml";
+    private const string GtaVSettingsFileName = "settings.xml";
+
     public static string ExpectedFileName(GraphicsSettingsTarget target)
     {
         return target == GraphicsSettingsTarget.FiveM
-            ? "gta5_settings.xml"
-            : "settings.xml";
+            ? FiveMSettingsFileName
+            : GtaVSettingsFileName;
     }
 
     /// <summary>
