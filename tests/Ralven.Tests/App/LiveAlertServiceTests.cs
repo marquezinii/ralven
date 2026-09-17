@@ -103,6 +103,31 @@ public sealed class CloudflareLiveAlertServiceTests
             new CloudflareLiveAlertService(httpClient, new Uri("http://insecure.example.com/live-alert")));
     }
 
+    /// <summary>
+    /// Uma resposta sem <c>Content-Length</c> (corpo em fluxo, como em
+    /// <c>Transfer-Encoding: chunked</c>) não pode escapar do limite de
+    /// tamanho: o teto precisa valer sobre os bytes efetivamente lidos, não
+    /// sobre o cabeçalho declarado.
+    /// </summary>
+    [Fact]
+    public async Task GetCurrentAsync_ReturnsNull_WhenAnOversizedBodyDeclaresNoContentLength()
+    {
+        // O excesso fica em um campo ignorado, e não na mensagem: assim o teste
+        // falha se o corpo for lido inteiro, em vez de passar por acaso porque
+        // o sanitizador rejeitaria uma mensagem longa demais.
+        var oversized = $$"""{"id":"x","active":true,"message":"ok","padding":"{{new string('a', 64 * 1024)}}"}""";
+        var handler = new StubHandler(_ =>
+        {
+            var content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(oversized)));
+            content.Headers.ContentLength = null;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+        });
+        using var httpClient = new HttpClient(handler);
+        var service = new CloudflareLiveAlertService(httpClient, TestEndpoint);
+
+        Assert.Null(await service.GetCurrentAsync(CancellationToken.None));
+    }
+
     private static StubHandler JsonResponse(string json) => new(_ => new HttpResponseMessage(HttpStatusCode.OK)
     {
         Content = new StringContent(json, Encoding.UTF8, "application/json"),

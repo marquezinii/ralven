@@ -65,14 +65,16 @@ public sealed class CloudflareLiveAlertService : ILiveAlertService
             using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
             using var response = await httpClient.SendAsync(
                 request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode || response.Content.Headers.ContentLength is > MaxResponseBytes)
+            if (!response.IsSuccessStatusCode)
             {
                 return null;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            var payload = await JsonSerializer.DeserializeAsync<LiveAlertPayload>(stream, JsonOptions, cancellationToken)
-                .ConfigureAwait(false);
+            var payload = await CloudflareTransportDefaults.ReadBoundedJsonAsync<LiveAlertPayload>(
+                response,
+                MaxResponseBytes,
+                JsonOptions,
+                cancellationToken).ConfigureAwait(false);
             return payload is null ? null : Sanitize(payload);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException

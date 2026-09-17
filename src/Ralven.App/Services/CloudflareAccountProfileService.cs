@@ -240,23 +240,13 @@ public sealed class CloudflareAccountProfileService : IAccountProfileService
         CancellationToken cancellationToken)
     {
         const int maximumBytes = 4 * 1024;
-        if (response.Content.Headers.ContentLength is > maximumBytes)
-        {
-            return null;
-        }
-
-        try
-        {
-            await response.Content.LoadIntoBufferAsync(maximumBytes, cancellationToken).ConfigureAwait(false);
-            var error = (await response.Content.ReadFromJsonAsync<AccountProfileErrorDto>(cancellationToken)
-                .ConfigureAwait(false))?.Error;
-            return error is { Length: > 0 and <= 64 }
-                && error.All(character => char.IsAsciiLetterLower(character) || character is '-') ? error : null;
-        }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or System.Text.Json.JsonException)
-        {
-            return null;
-        }
+        var body = await CloudflareTransportDefaults.ReadBoundedJsonAsync<AccountProfileErrorDto>(
+            response,
+            maximumBytes,
+            options: null,
+            cancellationToken).ConfigureAwait(false);
+        return body?.Error is { Length: > 0 and <= 64 } error
+            && error.All(character => char.IsAsciiLetterLower(character) || character is '-') ? error : null;
     }
 
     public async Task<UsernameAvailability> CheckUsernameAsync(
