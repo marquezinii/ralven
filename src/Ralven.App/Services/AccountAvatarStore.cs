@@ -108,16 +108,34 @@ public sealed class AccountAvatarStore
             var encoder = new PngBitmapEncoder();
             encoder.Frames.Add(BitmapFrame.Create(square));
 
-            // Write-then-move so a save that fails partway (disk full, killed
-            // process) can never leave a half-written avatar in place of a
-            // previously good one.
+            // Write-then-move so a save que falha no meio (disco cheio, processo
+            // encerrado) nunca deixa um avatar parcial no lugar de um válido. O
+            // nome temporário é único por gravação para que dois salvamentos
+            // simultâneos do mesmo avatar não disputem o mesmo arquivo.
             var destination = PathFor(uid);
-            var temporary = destination + ".tmp";
-            using (var output = File.Create(temporary))
+            var temporary = $"{destination}.{Guid.NewGuid():N}.tmp";
+            try
             {
-                encoder.Save(output);
+                using (var output = File.Create(temporary))
+                {
+                    encoder.Save(output);
+                }
+                File.Move(temporary, destination, overwrite: true);
             }
-            File.Move(temporary, destination, overwrite: true);
+            finally
+            {
+                // Best-effort: o avatar já está durável após o Move, então uma
+                // limpeza malsucedida não pode transformar um salvamento
+                // concluído em falha.
+                try
+                {
+                    File.Delete(temporary);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
+
             return true;
         }
         catch (Exception exception) when (exception is IOException or FormatException or NotSupportedException or UnauthorizedAccessException or ArgumentException or NotImplementedException)

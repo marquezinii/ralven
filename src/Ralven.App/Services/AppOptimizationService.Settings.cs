@@ -81,40 +81,7 @@ public sealed partial class AppOptimizationService
             return;
         }
 
-        Directory.CreateDirectory(appDataDirectory);
-        var temporary = Path.Combine(appDataDirectory, $".settings.{Guid.NewGuid():N}.tmp");
-        try
-        {
-            await using (var stream = new FileStream(
-                temporary,
-                FileMode.CreateNew,
-                FileAccess.Write,
-                FileShare.None,
-                16 * 1024,
-                FileOptions.Asynchronous | FileOptions.WriteThrough))
-            {
-                await JsonSerializer.SerializeAsync(stream, settings, indentedJson, cancellationToken)
-                    .ConfigureAwait(false);
-                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
-            }
-
-            File.Move(temporary, settingsPath, true);
-        }
-        finally
-        {
-            // Best-effort: settings are already durable once Move succeeds, so
-            // a failed temp cleanup must not surface as a failed save.
-            try
-            {
-                if (File.Exists(temporary))
-                {
-                    File.Delete(temporary);
-                }
-            }
-            catch (Exception exception) when (exception is IOException
-                or UnauthorizedAccessException)
-            {
-            }
-        }
+        await AtomicFile.WriteJsonAsync(settingsPath, settings, indentedJson, cancellationToken)
+            .ConfigureAwait(false);
     }
 }

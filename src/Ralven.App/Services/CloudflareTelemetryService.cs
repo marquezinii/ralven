@@ -185,22 +185,10 @@ public sealed class LocalTelemetryQueue
 
         var enqueuedAt = new DateTimeOffset(NextQueuedUtcTicks(), TimeSpan.Zero);
         var fileName = $"{enqueuedAt:yyyyMMddHHmmssfffffff}_{Guid.NewGuid():N}.json";
-        var temporaryPath = Path.Combine(queueDirectory, $".{fileName}.tmp");
         var finalPath = Path.Combine(queueDirectory, fileName);
 
-        await using (var stream = new FileStream(
-            temporaryPath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            4096,
-            FileOptions.Asynchronous))
-        {
-            await JsonSerializer.SerializeAsync(stream, telemetryEvent, jsonOptions, cancellationToken)
-                .ConfigureAwait(false);
-        }
-
-        File.Move(temporaryPath, finalPath, overwrite: true);
+        await AtomicFile.WriteJsonAsync(finalPath, telemetryEvent, jsonOptions, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private static long NextQueuedUtcTicks()

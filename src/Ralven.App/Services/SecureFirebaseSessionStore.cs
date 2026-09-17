@@ -30,19 +30,14 @@ public sealed class SecureFirebaseSessionStore
 
     internal async Task WriteAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        string? temporaryPath = null;
         byte[]? plaintext = null;
         byte[]? encrypted = null;
         try
         {
-            var directory = Path.GetDirectoryName(path)!;
-            Directory.CreateDirectory(directory);
             var json = JsonSerializer.Serialize(new PersistedFirebaseSession(refreshToken), RalvenJson.Options);
             plaintext = Encoding.UTF8.GetBytes(json);
             encrypted = ProtectedData.Protect(plaintext, null, DataProtectionScope.CurrentUser);
-            temporaryPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
-            await File.WriteAllBytesAsync(temporaryPath, encrypted, cancellationToken).ConfigureAwait(false);
-            File.Move(temporaryPath, path, overwrite: true);
+            await AtomicFile.WriteBytesAsync(path, encrypted, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or CryptographicException)
         {
@@ -59,15 +54,6 @@ public sealed class SecureFirebaseSessionStore
             if (encrypted is not null)
             {
                 CryptographicOperations.ZeroMemory(encrypted);
-            }
-            if (temporaryPath is not null)
-            {
-                try { File.Delete(temporaryPath); }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-                {
-                    // A stale, DPAPI-protected temporary file is safer than
-                    // masking the completed sign-in with a cleanup failure.
-                }
             }
         }
     }
