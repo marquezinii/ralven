@@ -2070,6 +2070,7 @@
     "ActionResults.DriverVersions.UnknownBuild": "1337690f547b8199a9488b2275251192525b838f893b0b7240fac11a9b647fc9",
     "ActionResults.DriverVersions.Video": "d534be829e32196b4d1e53b67103cf1e376b1d60071857572598c196abfefbc6",
     "ActionResults.Engine.ActionFailed": "05053a06ae713c99eed8ab0d9337f24092a1fb6b2510d14c66cca9bece5d5508",
+    "ActionResults.Engine.Applying": "cdb89cdb3ea63565e367a16400d0bbbbdb10a7b25a5f2b6bb01300de29425777",
     "ActionResults.Engine.Cancelled": "6d51f3f6fd500f069cb4f5ca58fe5225a51e96a702b5329873e1bdb08107bebc",
     "ActionResults.Engine.IncompleteActions": "35bacb9fb2a9faeb1b3ca5cd34d0d10654f1e17847a975b3b53479493ce7c2e6",
     "ActionResults.Engine.InterruptedAction": "65da7e9b02f0acc342d4b1db4e12880674b86d0cbfb0457f09c81e5b011e96c4",
