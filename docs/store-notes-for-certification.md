@@ -17,4 +17,4 @@ For HAGS (requires detected FiveM/GTAV Legacy, games stopped): Games > FiveM > s
 Broker validates typed/session-bound requests, verifies outcomes, records rollback authority and exits. No free-form shell, script or arbitrary command interface exists. Denying UAC prevents administrative changes. The candidate disables Web self-update and startup registration; Store owns updates. Pro/AI are marked unavailable and have no purchase flow.
 
 Detailed reproducible tests and limitations:
-https://github.com/marquezinii/ralven/blob/feat/store-certification-submission-20260917/docs/store-certification-test-plan.md
+https://github.com/marquezinii/ralven/blob/084424a81b6f92313399b88f16eae1cccd6f8b16/docs/store-certification-test-plan.md
