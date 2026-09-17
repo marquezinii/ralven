@@ -339,18 +339,7 @@ internal static class FiveMLogTailReader
 
         try
         {
-            using var stream = new FileStream(
-                latest.FullName,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete);
-            if (stream.Length > MaxTailBytes)
-            {
-                stream.Seek(-MaxTailBytes, SeekOrigin.End);
-            }
-
-            using var reader = new StreamReader(stream);
-            return new FiveMLogTail(reader.ReadToEnd(), latest.LastWriteTimeUtc);
+            return new FiveMLogTail(ReadTail(latest.FullName), latest.LastWriteTimeUtc);
         }
         catch (Exception exception) when (exception is IOException
             or UnauthorizedAccessException
@@ -358,6 +347,27 @@ internal static class FiveMLogTailReader
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Lê o final do arquivo, limitado a <see cref="MaxTailBytes"/>. O
+    /// compartilhamento permissivo é deliberado: o log pode estar aberto pelo
+    /// próprio jogo enquanto é lido.
+    /// </summary>
+    internal static string ReadTail(string path)
+    {
+        using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete);
+        if (stream.Length > MaxTailBytes)
+        {
+            stream.Seek(-MaxTailBytes, SeekOrigin.End);
+        }
+
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
     }
 }
 

@@ -91,7 +91,6 @@ public sealed class OverlaySoftwareDetectionAction : ReadOnlyDiagnosticAction
 
 public sealed class FiveMLegacyLogReaderAction : ReadOnlyDiagnosticAction
 {
-    private const long MaxTailBytes = 512 * 1024;
     private readonly string fiveMAppRoot;
 
     public FiveMLegacyLogReaderAction(string fiveMAppRoot)
@@ -145,31 +144,12 @@ public sealed class FiveMLegacyLogReaderAction : ReadOnlyDiagnosticAction
         }
     }
 
-    private static int CountPossibleErrors(string path)
-    {
-        using var stream = new FileStream(
-            path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete);
-        if (stream.Length > MaxTailBytes)
-        {
-            stream.Seek(-MaxTailBytes, SeekOrigin.End);
-        }
-
-        using var reader = new StreamReader(stream);
-        var count = 0;
-        string? line;
-        while ((line = reader.ReadLine()) is not null)
-        {
-            if (line.Contains("error", StringComparison.OrdinalIgnoreCase))
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
+    // Separa por '\r' e '\n' para contar as mesmas linhas que StreamReader.ReadLine
+    // contava antes, inclusive em um log com terminador solitário.
+    private static int CountPossibleErrors(string path) => FiveMLogTailReader
+        .ReadTail(path)
+        .Split('\r', '\n')
+        .Count(line => line.Contains("error", StringComparison.OrdinalIgnoreCase));
 
     private static string FormatAge(TimeSpan age)
     {
