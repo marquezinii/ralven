@@ -28,8 +28,9 @@ be completed by the owner before Submit for certification.
 - Expose the existing HAGS opt-in only in the packaged FiveM Legacy optimizer.
   Aggressive profile and existing preconditions remain required. No new Broker
   action, command contract, registry scope or administrative privilege is added.
-- Launcher declares PerMonitorV2 with the legacy DPI fallback, matching the App,
-  for its existing error/recovery dialogs; elevation levels are unchanged.
+- Packaged Launcher configures its process through the WinForms SetHighDpiMode API
+  before dialogs; elevation levels are unchanged. Manifest-based DPI was rejected
+  by the .NET 10 WFO0003 compiler warning and replaced without suppression.
 - Portable build can omit Web ZIP compression when MSIX consumes its directory;
   existing obfuscation and fail-closed integrity gates remain in use.
 - Paste-ready restricted-capability notes, certification notes, reproducible tests
@@ -43,7 +44,7 @@ be completed by the owner before Submit for certification.
 | `dotnet build Ralven.slnx --configuration Release --no-restore` | Passed, zero warnings/errors |
 | Release test runner, `--minimum-expected-tests 1` | 1,610 passed; zero failures/skips |
 | `dotnet format --verify-no-changes --no-restore --include ...` | Passed for all changed C# files |
-| `Sync-Localization.ps1 -Mode Check` | Local PowerShell 7.6.5 attempt did not complete promptly (over 20 minutes); no local pass claimed. Canonical catalog check remains required in PR CI. Catalog files themselves are unchanged; the UI reuses an existing localized action label. |
+| `Sync-Localization.ps1 -Mode Check` | Local PowerShell 7.6.5 attempts did not complete promptly (over 20 minutes); no local pass claimed. The same canonical check passed in PR CI in six seconds; local duplicate processes were then stopped. Catalog files themselves are unchanged; the UI reuses an existing localized action label. |
 | PowerShell parser for packaging/build scripts | Passed |
 | Existing release hardening (`-Harden`) | App/Broker Core/Windows obfuscated; embedded Launcher checked; fail-closed payload gate passed |
 | MakeAppx schema/pack validation | Passed |
@@ -98,7 +99,7 @@ Test the actual advertised Windows 10 editions/builds before public Store rollou
    revalidate the exact upload package. No invented production identity is stored.
 2. Complete account verification, listing with a real screenshot, actual support
    contact/public privacy URL, IARC and displayed declarations in Partner Center.
-3. Microsoft decides `allowElevation`; retain the two optional WACK failures with
+3. Microsoft decides `allowElevation`; retain optional WACK failures with
    evidence instead of treating local package validation as capability approval.
 4. Individual versus Company eligibility for this particular capability has no
    unequivocal rule in the consulted official documentation. Inspect Packages,
@@ -132,9 +133,9 @@ AI_RULES exception and isolated MSIX payload validation.
 
 ## Local candidate identity and fingerprint
 
-`artifacts/msix-store/Ralven-Store-1.7.1.0-x64.msix`, 214,518,020 bytes.
+`artifacts/msix-store/Ralven-Store-1.7.1.0-x64.msix`, 214,521,541 bytes.
 
-SHA-256: `F89CF6FE4D3848C3463A1EC4FE1114573159BFFD5CF35343417553B6F15435A5`.
+SHA-256: `3472D2B72DCB5B85AA107BE4B8E1019983C4982F6114EEEF372EB33D5EB88C4B`.
 
 - Name: `Ralven.StoreCertificationLocal`.
 - Publisher: `CN=Ralven Store Certification Local`.
@@ -152,25 +153,36 @@ then-current documentation. Do not edit this signed candidate after WACK.
 
 ## WACK final — full results, not capability approval
 
-WACK 10.0.26100.7705, Windows 11 x64, completed 2026-09-17 at 16:30:33.
-`PARTIAL_RUN=FALSE`, `OVERALL_RESULT=PASS`: **22 PASS, 2 optional FAIL**.
-No final WARNING test remains. The kit's overall PASS must not hide the optional
-failures or be represented as Microsoft's approval of restricted capabilities.
-Raw report: `artifacts/store-validation/wack-final.xml` (local, outside Git).
-The pre-DPI report is retained as `wack-before-dpi.xml`; it had an overall WARNING.
+WACK 10.0.26100.7705, Windows 11 x64, completed 2026-09-17 at 16:44:51.
+`PARTIAL_RUN=FALSE`, `OVERALL_RESULT=WARNING`: **21 PASS, 2 optional FAIL,
+1 WARNING**. Raw XML/HTML is retained in `artifacts/store-validation/wack-api-dpi.*`.
+No local WACK result represents Microsoft's approval of restricted capabilities.
+
+Three passes are retained:
+- Before DPI changes: WARNING, 21 PASS / 2 FAIL / 1 WARNING (`wack-before-dpi.xml`).
+- Intermediate manifest-DPI candidate: overall PASS, 22 PASS / 2 optional FAIL
+  (`wack-manifest-dpi.xml`), but adding those manifest settings produced the real
+  WinForms compiler warning WFO0003. That approach was discarded, not suppressed.
+- Final API-based candidate: WARNING, 21 PASS / 2 optional FAIL / 1 WARNING,
+  with Release build zero warnings/errors. This is the fingerprinted candidate above.
 
 | Finding | Classification and action |
 | --- | --- |
 | UAC execution level, index 11: Broker requireAdministrator | Expected due to requested allowElevation; potential certification blocker if Microsoft refuses the exception. Preserve UAC/manifest and submit justification. |
 | Blocked executables, index 88: process creation APIs | Real static references in Launcher/App/Windows and self-contained .NET. Legitimate typed/native launch paths exist; not proof of arbitrary Broker execution. Potential blocker requiring desktop/full-trust certification review. Do not call all references false positives. |
 | Blocked-name strings in .NET/WPF/resource binaries | Possible scanner/runtime effects; a string match alone does not establish invocation. Preserve each occurrence below; no blanket exemption or approval asserted. |
-| Blocked-name strings in Markdown | Confirmed textual documentation matches, not executable launch. False positives for these specific documentation occurrences; documentation was not renamed or removed to evade the scan. |
-| First-run DPI warning on Launcher | Correctable before submission; fixed with genuine PerMonitorV2/legacy DPI declarations for its dialogs. Final DPI test passed. |
+| Blocked-name strings in Markdown | Confirmed textual documentation matches, including this evidence report, not executable launch. False positives for these specific documentation occurrences. Documentation was not renamed or removed to evade the scan. |
+| DPI warning, index 92: Launcher single-file | Potential blocker / possible .NET single-file scanner effect. Packaged Main calls the official WinForms SetHighDpiMode(PerMonitorV2) API before any dialog; WPF App already declares PerMonitorV2. Kit still reports missing native DPI API/manifest. Runtime DPI of Launcher dialogs was not measured; do not assert a proven blanket false positive. Manual monitor/DPI testing and certification review remain appropriate. |
+
+[Official WFO0003 correction](https://learn.microsoft.com/en-us/dotnet/desktop/winforms/compiler-messages/wfo0003)
+and [WinForms process DPI API](https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.application.sethighdpimode?view=windowsdesktop-10.0).
+No diagnostic was disabled; no misleading manifest was added just to satisfy WACK.
 
 Package/manifest/branding, debug configuration, private signing keys, services/drivers,
 resource and special-capability static tests passed. Special-capability PASS only
 validates this local test; it does not authorize allowElevation in Partner Center.
-The final test table and every failure message follow. No warning/failure is omitted.
+Every final failure/warning message follows. Additional Markdown string matches
+are effects of shipping the normal portable documentation, not additional actions.
 
 | Index | Test | Result | Optional |
 | --- | --- | --- | --- |
@@ -197,7 +209,7 @@ The final test table and every failure message follow. No warning/failure is omi
 | 89 | Uso de arquivo morto | PASS | TRUE |
 | 88 | Executáveis bloqueados | FAIL | TRUE |
 | 63 | Arquivos adequados da plataforma | PASS | TRUE |
-| 92 | DPIAwarenessValidation | PASS | FALSE |
+| 92 | DPIAwarenessValidation | WARNING | FALSE |
 
 ### Index 11 — FAIL
 
@@ -210,32 +222,32 @@ The final test table and every failure message follow. No warning/failure is omi
 - O arquivo Runtime\versions\1.7.1\System.Diagnostics.Process.dll contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
 - O arquivo Runtime\versions\1.7.1\System.Diagnostics.Process.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteExW
 - O arquivo Runtime\versions\1.7.1\Microsoft.VisualBasic.Forms.dll contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessA
+- O arquivo Runtime\versions\1.7.1\Ralven.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\broker\mscordbi.dll contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
 - O arquivo Runtime\versions\1.7.1\mscordbi.dll contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
-- O arquivo Runtime\versions\1.7.1\Ralven.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\System.Diagnostics.PerformanceCounter.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\System.CodeDom.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
-- O arquivo Runtime\versions\1.7.1\broker\Ralven.Broker.exe contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
 - O arquivo Runtime\versions\1.7.1\broker\coreclr.dll contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
 - O arquivo Runtime\versions\1.7.1\coreclr.dll contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
-- O arquivo Runtime\versions\1.7.1\Ralven.exe contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
+- O arquivo Ralven.Launcher.exe contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
+- O arquivo Ralven.Launcher.exe contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
 - O arquivo Runtime\versions\1.7.1\System.Windows.Forms.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\broker\System.Diagnostics.PerformanceCounter.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
+- O arquivo Runtime\versions\1.7.1\Ralven.exe contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
 - O arquivo Runtime\versions\1.7.1\PresentationFramework.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteEx
 - O arquivo Runtime\versions\1.7.1\broker\System.CodeDom.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\UIAutomationTypes.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteA
 - O arquivo Runtime\versions\1.7.1\UIAutomationTypes.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteEx
+- O arquivo Runtime\versions\1.7.1\Ralven.Windows.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\Wpf.Ui.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
-- O arquivo Runtime\versions\1.7.1\broker\Ralven.Windows.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\WindowsBase.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteA
 - O arquivo Runtime\versions\1.7.1\WindowsBase.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteEx
 - O arquivo Runtime\versions\1.7.1\PenImc_cor3.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteExW
+- O arquivo Runtime\versions\1.7.1\broker\Ralven.Windows.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
 - O arquivo Runtime\versions\1.7.1\System.Windows.Forms.Primitives.dll contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
 - O arquivo Runtime\versions\1.7.1\Sentry.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
+- O arquivo Runtime\versions\1.7.1\broker\Ralven.Broker.exe contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
 - O arquivo Runtime\versions\1.7.1\PresentationUI.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
-- O arquivo Runtime\versions\1.7.1\Ralven.Windows.dll contém uma referência a um "Processo de Inicialização" relacionado à API System.Diagnostics.Process.Start
-- O arquivo Ralven.Launcher.exe contém uma referência a um "Processo de Inicialização" relacionado à API kernel32.dll!CreateProcessW
-- O arquivo Ralven.Launcher.exe contém uma referência a um "Processo de Inicialização" relacionado à API shell32.dll!ShellExecuteW
 - O arquivo Ralven.Launcher.exe contém uma referência de executável bloqueada para "CMD".
 - O arquivo Ralven.Launcher.exe contém uma referência de executável bloqueada para "bash".
 - O arquivo Ralven.Launcher.exe contém uma referência de executável bloqueada para "cdB".
@@ -289,11 +301,23 @@ The final test table and every failure message follow. No warning/failure is omi
 - O arquivo safety.md contém uma referência de executável bloqueada para "PowerShell".
 - O arquivo safety.md contém uma referência de executável bloqueada para "CMD".
 - O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "PowerShell".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "CMD".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "bash".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "cdB".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "MSBuild".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "dnX".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "CsI".
+- O arquivo store-submission-validation.md contém uma referência de executável bloqueada para "rEg".
 - O arquivo CONVENTIONS.md contém uma referência de executável bloqueada para "MSBuild".
 - O arquivo STACK.md contém uma referência de executável bloqueada para "MSBuild".
 - O arquivo STACK.md contém uma referência de executável bloqueada para "PowerShell".
 - O arquivo Ralven.resources.dll contém uma referência de executável bloqueada para "REG".
 - O arquivo System.Windows.Forms.resources.dll contém uma referência de executável bloqueada para "CSi".
+
+### Index 92 — WARNING
+
+- O arquivo Ralven.Launcher.exe não tem PerMonitorV2 incluído no manifesto nem chamadas para APIs de Reconhecimento de DPI, por exemplo: user32!SetProcessDpiAwarenessContext ou user32!SetThreadDpiAwarenessContext.
+- O app Ralven.StoreCertificationLocal_1.7.1.0_x64__r4pg94g74pms8 não tem Reconhecimento de DPI.
 
 ## Local test cleanup
 
