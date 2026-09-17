@@ -28,6 +28,17 @@ public sealed record WindowsTransactionOptions
 
 public sealed record WindowsRollbackOptions
 {
+    /// <summary>
+    /// Desfaz somente a fase de usuário padrão. É a opção usada por todo
+    /// chamador que não dispõe do broker elevado, e era escrita por extenso em
+    /// cada um deles. Seguro compartilhar: as propriedades são <c>init</c>.
+    /// </summary>
+    public static WindowsRollbackOptions StandardUserOnly { get; } = new()
+    {
+        IncludeStandardUserActions = true,
+        IncludeAdministratorActions = false
+    };
+
     public bool IncludeStandardUserActions { get; init; } = true;
 
     public bool IncludeAdministratorActions { get; init; } = true;

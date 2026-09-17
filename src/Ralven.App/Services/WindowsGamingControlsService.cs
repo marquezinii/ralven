@@ -171,11 +171,7 @@ public sealed class WindowsGamingControlsService
                 await engine.RollbackAsync(
                     transactionId,
                     isElevated: false,
-                    new WindowsRollbackOptions
-                    {
-                        IncludeStandardUserActions = true,
-                        IncludeAdministratorActions = false
-                    },
+                    WindowsRollbackOptions.StandardUserOnly,
                     CancellationToken.None).ConfigureAwait(false);
                 after = inspector.Inspect();
             }
@@ -216,11 +212,7 @@ public sealed class WindowsGamingControlsService
             var result = await engine!.RollbackAsync(
                 transactionId,
                 isElevated: false,
-                new WindowsRollbackOptions
-                {
-                    IncludeStandardUserActions = true,
-                    IncludeAdministratorActions = false
-                },
+                WindowsRollbackOptions.StandardUserOnly,
                 cancellationToken).ConfigureAwait(false);
             var succeeded = result.State == TransactionState.RolledBack;
             return new WindowsGamingRestoreResult(

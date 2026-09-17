@@ -64,6 +64,7 @@
     <Resource Include="../../assets/brand/fonts/inter-4.1/InterVariable.ttf" Link="Assets/Fonts/InterVariable.ttf" />
     <Resource Include="../../assets/brand/fonts/inter-4.1/InterVariable-Italic.ttf" Link="Assets/Fonts/InterVariable-Italic.ttf" />
     <Resource Include="../../assets/brand/fonts/geist-1.1.0/GeistVariableVF.ttf" Link="Assets/Fonts/GeistVariableVF.ttf" />
+    <EmbeddedResource Include="Resources/oauth-callback.html" LogicalName="Ralven.App.Resources.oauth-callback.html" />
     <EmbeddedResource Include="Assets/update-manifest-public-key.pem" />
     <EmbeddedResource Include="Assets/broker-integrity-public-key.pem" />
     <EmbeddedResource Include="../../localization/locales.json" Link="Resources/locales.json" LogicalName="Ralven.App.Resources.locales.json" />

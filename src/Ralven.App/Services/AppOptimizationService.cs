@@ -426,11 +426,7 @@ public sealed partial class AppOptimizationService : IAppOptimizationService
         var localResult = await engine.RollbackAsync(
             transactionId,
             isElevated: false,
-            new WindowsRollbackOptions
-            {
-                IncludeStandardUserActions = true,
-                IncludeAdministratorActions = false
-            },
+            WindowsRollbackOptions.StandardUserOnly,
             cancellationToken).ConfigureAwait(false);
         if (localResult.State == TransactionState.RollbackFailed)
         {
