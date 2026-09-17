@@ -139,7 +139,7 @@ public sealed partial class MainViewModel
         }
     }
 
-    public bool CanCheckForUpdatesManually => !IsCheckingForUpdatesManually;
+    public bool CanCheckForUpdatesManually => releaseUpdateService is not null && !IsCheckingForUpdatesManually;
 
     public string? ManualUpdateCheckMessage
     {

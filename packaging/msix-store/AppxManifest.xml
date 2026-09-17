@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap uap10 desktop rescap">
+  <Identity
+    Name="VemryxInc.Ralven"
+    Publisher="CN=1FB9E268-F80A-40DF-8E57-BBB7C7849ABD"
+    Version="1.7.1.0"
+    ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>Ralven</DisplayName>
+    <PublisherDisplayName>Vemryx Inc.</PublisherDisplayName>
+    <Description>Windows diagnostics and reversible, user-approved configuration.</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Resources>
+    <Resource Language="en-US" />
+    <Resource Language="pt-BR" />
+    <Resource Language="es-ES" />
+    <Resource Language="fr-FR" />
+  </Resources>
+  <Dependencies>
+    <TargetDeviceFamily
+      Name="Windows.Desktop"
+      MinVersion="10.0.19041.0"
+      MaxVersionTested="10.0.26200.0" />
+  </Dependencies>
+  <Applications>
+    <Application
+      Id="Ralven"
+      Executable="Ralven.Launcher.exe"
+      uap10:RuntimeBehavior="packagedClassicApp"
+      uap10:TrustLevel="mediumIL">
+      <uap:VisualElements
+        AppListEntry="default"
+        DisplayName="Ralven"
+        Description="AI-powered Windows management and optimization platform."
+        BackgroundColor="transparent"
+        Square44x44Logo="Assets\Square44x44Logo.png"
+        Square150x150Logo="Assets\Square150x150Logo.png" />
+    </Application>
+  </Applications>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="allowElevation" />
+  </Capabilities>
+</Package>
+

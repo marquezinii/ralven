@@ -11,7 +11,10 @@ param(
     # output BEFORE any checksum, so the runtime ZIP, broker SHA256SUMS, release
     # manifest and signed update manifest all cover the hardened binaries.
     # Off by default: development and CI test builds stay un-obfuscated.
-    [switch]$Harden
+    [switch]$Harden,
+
+    # MSIX consumes the directory directly, not the Web distribution ZIPs.
+    [switch]$SkipArchives
 )
 
 Set-StrictMode -Version Latest
@@ -167,15 +170,17 @@ try {
         }
     Set-Content -LiteralPath (Join-Path $appOutput 'SHA256SUMS.txt') -Value $checksums -Encoding utf8
 
-    foreach ($path in @($runtimeArchivePath, $runtimeArchiveHashPath)) {
-        if (Test-Path -LiteralPath $path) {
-            Assert-UnderArtifacts $path
-            Remove-Item -LiteralPath $path -Force
+    if (-not $SkipArchives) {
+        foreach ($path in @($runtimeArchivePath, $runtimeArchiveHashPath)) {
+            if (Test-Path -LiteralPath $path) {
+                Assert-UnderArtifacts $path
+                Remove-Item -LiteralPath $path -Force
+            }
         }
+        Compress-Archive -Path (Join-Path $appOutput '*') -DestinationPath $runtimeArchivePath -CompressionLevel Optimal
+        $runtimeArchiveHash = (Get-FileHash -LiteralPath $runtimeArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        Set-Content -LiteralPath $runtimeArchiveHashPath -Value "$runtimeArchiveHash  $([System.IO.Path]::GetFileName($runtimeArchivePath))" -Encoding ascii
     }
-    Compress-Archive -Path (Join-Path $appOutput '*') -DestinationPath $runtimeArchivePath -CompressionLevel Optimal
-    $runtimeArchiveHash = (Get-FileHash -LiteralPath $runtimeArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    Set-Content -LiteralPath $runtimeArchiveHashPath -Value "$runtimeArchiveHash  $([System.IO.Path]::GetFileName($runtimeArchivePath))" -Encoding ascii
 
     if (Test-Path -LiteralPath $finalRoot) {
         Assert-UnderArtifacts $finalRoot
@@ -190,15 +195,17 @@ try {
         Set-Content -LiteralPath (Join-Path $finalRoot 'Runtime\active.json') -Encoding utf8
     Remove-Item -LiteralPath $stagingRoot -Recurse -Force
 
-    foreach ($path in @($archivePath, $archiveHashPath)) {
-        if (Test-Path -LiteralPath $path) {
-            Assert-UnderArtifacts $path
-            Remove-Item -LiteralPath $path -Force
+    if (-not $SkipArchives) {
+        foreach ($path in @($archivePath, $archiveHashPath)) {
+            if (Test-Path -LiteralPath $path) {
+                Assert-UnderArtifacts $path
+                Remove-Item -LiteralPath $path -Force
+            }
         }
+        Compress-Archive -Path (Join-Path $finalRoot '*') -DestinationPath $archivePath -CompressionLevel Optimal
+        $archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        Set-Content -LiteralPath $archiveHashPath -Value "$archiveHash  $([System.IO.Path]::GetFileName($archivePath))" -Encoding ascii
     }
-    Compress-Archive -Path (Join-Path $finalRoot '*') -DestinationPath $archivePath -CompressionLevel Optimal
-    $archiveHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    Set-Content -LiteralPath $archiveHashPath -Value "$archiveHash  $([System.IO.Path]::GetFileName($archivePath))" -Encoding ascii
 
     if ($Harden) {
         # Fail-closed gate: don't trust that the steps above hardened
@@ -206,17 +213,21 @@ try {
         # (the assembled tree and both ZIPs), and abort the build rather than
         # produce a release asset if any un-hardened Core/Windows copy or
         # leaked debug/obfuscation-map file is found.
+        $hardeningArtifacts = @{}
+        if (-not $SkipArchives) {
+            $hardeningArtifacts.PortableZipPath = $archivePath
+            $hardeningArtifacts.RuntimeZipPath = $runtimeArchivePath
+        }
         & (Join-Path $PSScriptRoot 'Test-NoUnobfuscatedAssemblies.ps1') `
-            -RuntimeDirectory $finalRoot `
-            -Version $version `
-            -PortableZipPath $archivePath `
-            -RuntimeZipPath $runtimeArchivePath
+            -RuntimeDirectory $finalRoot -Version $version @hardeningArtifacts
         if ($LASTEXITCODE -ne 0) { throw 'Fail-closed hardening verification failed.' }
     }
 
     Write-Host "Portable build ready: $finalRoot" -ForegroundColor Green
-    Write-Host "Portable archive ready: $archivePath" -ForegroundColor Green
-    Write-Host "Atomic runtime archive ready: $runtimeArchivePath" -ForegroundColor Green
+    if (-not $SkipArchives) {
+        Write-Host "Portable archive ready: $archivePath" -ForegroundColor Green
+        Write-Host "Atomic runtime archive ready: $runtimeArchivePath" -ForegroundColor Green
+    }
 }
 catch {
     if (Test-Path -LiteralPath $stagingRoot) {

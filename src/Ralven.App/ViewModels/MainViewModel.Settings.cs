@@ -68,11 +68,14 @@ public sealed partial class MainViewModel
         }
     }
 
+    public bool CanConfigureStartup => !Ralven.UpdateRuntime.PackageIdentity.IsPackaged;
+
     public bool LaunchAtStartup
     {
         get => launchAtStartup;
         set
         {
+            if (!CanConfigureStartup) return;
             if (launchAtStartup == value)
             {
                 return;
